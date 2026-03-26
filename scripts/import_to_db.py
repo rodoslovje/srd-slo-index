@@ -98,6 +98,8 @@ def main():
                     ),
                     birth,
                 )
+        else:
+            print(f"  -> WARNING: Could not find births file at {births_file}")
 
         # Load Families
         families_file = os.path.join(DATA_DIR, f"{contributor_id}-families.json")
@@ -114,6 +116,8 @@ def main():
                     ),
                     family,
                 )
+        else:
+            print(f"  -> WARNING: Could not find families file at {families_file}")
 
         db.commit()
 
