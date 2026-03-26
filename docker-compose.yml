@@ -16,6 +16,7 @@ services:
     volumes:
       - ./data:/app/data
       - ./scripts:/app/scripts
+      - ./backend/src:/app/src
     restart: unless-stopped
     env_file:
       - .env
