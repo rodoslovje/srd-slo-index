@@ -16,8 +16,8 @@ Before running the web application, you must extract the data from your GEDCOM (
 2. Setup a Python virtual environment and install the required dependencies:
    ```bash
    python -m venv .venv
-   source .venv/bin/activate  # On Windows use: .venv\Scripts\activate
-   pip install python-gedcom
+   source .venv/bin/activate
+   pip install -r requirements.txt
    ```
 3. Run the extraction script:
    ```bash
