@@ -44,8 +44,11 @@ def search_all(db: Session, query: str, skip: int = 0, limit: int = 100):
         .filter(
             or_(
                 models.Birth.name.op("%")(query_text),
+                models.Birth.name.ilike(search_term),
                 models.Birth.surname.op("%")(query_text),
+                models.Birth.surname.ilike(search_term),
                 models.Birth.place_of_birth.op("%")(query_text),
+                models.Birth.place_of_birth.ilike(search_term),
                 models.Birth.date_of_birth.ilike(search_term),
             )
         )
@@ -59,10 +62,15 @@ def search_all(db: Session, query: str, skip: int = 0, limit: int = 100):
         .filter(
             or_(
                 models.Family.husband_name.op("%")(query_text),
+                models.Family.husband_name.ilike(search_term),
                 models.Family.husband_surname.op("%")(query_text),
+                models.Family.husband_surname.ilike(search_term),
                 models.Family.wife_name.op("%")(query_text),
+                models.Family.wife_name.ilike(search_term),
                 models.Family.wife_surname.op("%")(query_text),
+                models.Family.wife_surname.ilike(search_term),
                 models.Family.place_of_marriage.op("%")(query_text),
+                models.Family.place_of_marriage.ilike(search_term),
                 models.Family.date_of_marriage.ilike(search_term),
             )
         )
@@ -90,12 +98,25 @@ def search_advanced_births(
     query = db.query(models.Birth)
 
     if name:
-        query = query.filter(models.Birth.name.op("%")(cast(name, Text)))
+        query = query.filter(
+            or_(
+                models.Birth.name.op("%")(cast(name, Text)),
+                models.Birth.name.ilike(f"%{name}%"),
+            )
+        )
     if surname:
-        query = query.filter(models.Birth.surname.op("%")(cast(surname, Text)))
+        query = query.filter(
+            or_(
+                models.Birth.surname.op("%")(cast(surname, Text)),
+                models.Birth.surname.ilike(f"%{surname}%"),
+            )
+        )
     if place_of_birth:
         query = query.filter(
-            models.Birth.place_of_birth.op("%")(cast(place_of_birth, Text))
+            or_(
+                models.Birth.place_of_birth.op("%")(cast(place_of_birth, Text)),
+                models.Birth.place_of_birth.ilike(f"%{place_of_birth}%"),
+            )
         )
     if date_of_birth:
         query = query.filter(models.Birth.date_of_birth.ilike(f"%{date_of_birth}%"))
@@ -122,21 +143,38 @@ def search_advanced_families(
 
     if husband_name:
         query = query.filter(
-            models.Family.husband_name.op("%")(cast(husband_name, Text))
+            or_(
+                models.Family.husband_name.op("%")(cast(husband_name, Text)),
+                models.Family.husband_name.ilike(f"%{husband_name}%"),
+            )
         )
     if husband_surname:
         query = query.filter(
-            models.Family.husband_surname.op("%")(cast(husband_surname, Text))
+            or_(
+                models.Family.husband_surname.op("%")(cast(husband_surname, Text)),
+                models.Family.husband_surname.ilike(f"%{husband_surname}%"),
+            )
         )
     if wife_name:
-        query = query.filter(models.Family.wife_name.op("%")(cast(wife_name, Text)))
+        query = query.filter(
+            or_(
+                models.Family.wife_name.op("%")(cast(wife_name, Text)),
+                models.Family.wife_name.ilike(f"%{wife_name}%"),
+            )
+        )
     if wife_surname:
         query = query.filter(
-            models.Family.wife_surname.op("%")(cast(wife_surname, Text))
+            or_(
+                models.Family.wife_surname.op("%")(cast(wife_surname, Text)),
+                models.Family.wife_surname.ilike(f"%{wife_surname}%"),
+            )
         )
     if place_of_marriage:
         query = query.filter(
-            models.Family.place_of_marriage.op("%")(cast(place_of_marriage, Text))
+            or_(
+                models.Family.place_of_marriage.op("%")(cast(place_of_marriage, Text)),
+                models.Family.place_of_marriage.ilike(f"%{place_of_marriage}%"),
+            )
         )
     if date_of_marriage:
         query = query.filter(
