@@ -1,5 +1,6 @@
 from typing import List, Optional
 from fastapi import Depends, FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
 from . import crud, models, schemas
@@ -10,6 +11,17 @@ models.Base.metadata.create_all(bind=engine)
 
 # Initialize the FastAPI app
 app = FastAPI()
+
+# Configure CORS so the frontend can make requests to this API
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "*"
+    ],  # In production, replace "*" with your frontend domain e.g., ["https://sgi.renko.fyi"]
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 # Dependency to get DB session

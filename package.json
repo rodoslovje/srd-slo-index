@@ -4,9 +4,9 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --port 1995",
-    "build": "vite build",
-    "preview": "vite preview"
+    "dev": "cd web && vite --port 1995",
+    "build": "cd web && vite build",
+    "preview": "cd web && vite preview"
   },
   "devDependencies": {
     "vite": "^5.0.0"

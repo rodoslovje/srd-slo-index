@@ -42,7 +42,7 @@ The database and API backend are containerized and run together on a custom Dock
    ```
 3. Build and start the backend containers in the background:
    ```bash
-   docker-compose up -d --build
+   docker compose up -d --build
    ```
 
 ## 3. Importing Data into PostgreSQL
@@ -50,7 +50,7 @@ The database and API backend are containerized and run together on a custom Dock
 Once the API and DB containers are running, populate the database with the extracted JSON files. Execute the import script _inside_ the running API container:
 
 ```bash
-docker-compose exec api python scripts/import_to_db.py
+docker compose exec api python scripts/import_to_db.py
 ```
 
 You can preview the built application locally with:

@@ -1,4 +1,9 @@
-const db = { births: [], families: [], metadata: [] };
+// Define the base URL for the backend API
+const apiHost = import.meta.env.SGI_API_HOST || 'sgi-api.renko.fyi';
+
+// Strip trailing slashes to prevent 404 double-slash errors (e.g., https://domain.com//api/...)
+const cleanHost = apiHost.replace(/\/+$/, '');
+const API_BASE_URL = cleanHost.startsWith('http') ? cleanHost : `https://${cleanHost}`;
 
 // Data column definitions for table rendering
 const birthColumns = ['name', 'surname', 'date_of_birth', 'place_of_birth', 'contributor'];
@@ -6,36 +11,12 @@ const familyColumns = ['husband_name', 'husband_surname', 'wife_name', 'wife_sur
 
 async function init() {
   const loading = document.getElementById('loading');
+  loading.style.display = 'none'; // Hide loading text by default
+
   try {
-    const metaRes = await fetch('/data/metadata.json');
-    if (!metaRes.ok) throw new Error('metadata.json not found');
-    db.metadata = await metaRes.json();
-
-    // Fetch all datasets dynamically based on metadata contents
-    const birthPromises = db.metadata.map(m =>
-      fetch(`/data/${m.contributor}-births.json`)
-        .then(res => res.ok ? res.json() : [])
-        .then(data => data.map(d => ({ ...d, contributor: m.contributor })))
-    );
-
-    const familyPromises = db.metadata.map(m =>
-      fetch(`/data/${m.contributor}-families.json`)
-        .then(res => res.ok ? res.json() : [])
-        .then(data => data.map(d => ({ ...d, contributor: m.contributor })))
-    );
-
-    const birthsArrays = await Promise.all(birthPromises);
-    const familiesArrays = await Promise.all(familyPromises);
-
-    db.births = birthsArrays.flat();
-    db.families = familiesArrays.flat();
-
-    renderContributors();
     setupAdvancedSearchForm();
-    loading.style.display = 'none';
-
   } catch (err) {
-    loading.textContent = 'Error loading data. Make sure to run gedcom-to-json.py to build metadata.json!';
+    loading.textContent = 'Error initializing the application.';
     console.error(err);
   }
 }
@@ -43,6 +24,11 @@ async function init() {
 // Manage Tabs
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
+    // If contributors tab is clicked, fetch and render the data
+    if (btn.dataset.target === 'tab-contributors') {
+      renderContributors();
+    }
+
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
     btn.classList.add('active');
@@ -51,18 +37,26 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 });
 
 // --- General Search ---
-document.getElementById('btn-general-search').addEventListener('click', () => {
+document.getElementById('btn-general-search').addEventListener('click', async () => {
   const query = document.getElementById('general-query').value.toLowerCase().trim();
+  if (!query) return;
+
   document.getElementById('general-results').style.display = 'block';
+  document.getElementById('table-general-births').innerHTML = '<p>Searching...</p>';
+  document.getElementById('table-general-families').innerHTML = '<p>Searching...</p>';
 
-  const bRes = db.births.filter(b => Object.values(b).some(v => String(v).toLowerCase().includes(query)));
-  const fRes = db.families.filter(f => Object.values(f).some(v => String(v).toLowerCase().includes(query)));
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/search/general?q=${encodeURIComponent(query)}`);
+    const results = await response.json();
 
-  document.getElementById('count-general-births').textContent = bRes.length;
-  document.getElementById('count-general-families').textContent = fRes.length;
-
-  renderTable(bRes, 'table-general-births', birthColumns);
-  renderTable(fRes, 'table-general-families', familyColumns);
+    document.getElementById('count-general-births').textContent = results.births.length;
+    document.getElementById('count-general-families').textContent = results.families.length;
+    renderTable(results.births, 'table-general-births', birthColumns);
+    renderTable(results.families, 'table-general-families', familyColumns);
+  } catch (error) {
+    console.error("Search failed:", error);
+    document.getElementById('general-results').innerHTML = '<p>Search failed. Check API connection.</p>';
+  }
 });
 
 // --- Advanced Search ---
@@ -70,7 +64,7 @@ function setupAdvancedSearchForm() {
   const container = document.getElementById('adv-search-controls');
 
   const renderFields = () => {
-    const isBirth = document.getElementById('adv-search-type')?.value !== 'families';
+    const isBirth = document.getElementById('adv-search-type')?.value !== 'families'; // Default to births
     const cols = isBirth ? birthColumns : familyColumns;
 
     let html = `<select id="adv-search-type">
@@ -91,28 +85,11 @@ function setupAdvancedSearchForm() {
   renderFields();
 }
 
-function performAdvancedSearch() {
-  const isBirth = document.getElementById('adv-search-type').value === 'births';
-  const cols = isBirth ? birthColumns : familyColumns;
-  const dataset = isBirth ? db.births : db.families;
-  document.getElementById('advanced-results').style.display = 'block';
-
-  // Gather query criteria
-  const criteria = {};
-  cols.filter(c => c !== 'contributor').forEach(c => {
-    criteria[c] = document.getElementById(`adv-${c}`).value.toLowerCase().trim();
-  });
-
-  // Filter based on all filled criteria fields
-  const results = dataset.filter(record => {
-    return Object.entries(criteria).every(([key, query]) => {
-      if (!query) return true; // ignore empty search boxes
-      return (record[key] || '').toLowerCase().includes(query);
-    });
-  });
-
-  document.getElementById('count-adv-results').textContent = results.length;
-  renderTable(results, 'table-adv-results', cols);
+async function performAdvancedSearch() {
+  // This function would be built out similar to the general search,
+  // but it would construct a query string with multiple parameters
+  // (e.g., /api/search/advanced/births?name=John&surname=Doe)
+  alert("Advanced search endpoint not yet implemented in this example.");
 }
 
 // --- Table Generation Helpers ---
@@ -139,17 +116,24 @@ function renderTable(data, containerId, columns) {
   container.innerHTML = html;
 }
 
-function renderContributors() {
+async function renderContributors() {
   const container = document.getElementById('table-contributors');
-  if (db.metadata.length === 0) return;
+  container.innerHTML = '<p>Loading contributors...</p>';
 
-  const dataForTable = db.metadata.map(m => ({
-    contributor_ID: m.contributor,
-    total_births: m.births_count,
-    total_families: m.families_count,
-    last_modified: new Date(m.last_modified).toLocaleString()
-  }));
-  renderTable(dataForTable, 'table-contributors', ['contributor_ID', 'total_births', 'total_families', 'last_modified']);
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/contributors/`);
+    const metadata = await response.json();
+
+    const dataForTable = metadata.map(m => ({
+      contributor_ID: m.name,
+      total_births: m.births_count,
+      total_families: m.families_count,
+      last_modified: new Date(m.last_modified).toLocaleString()
+    }));
+    renderTable(dataForTable, 'table-contributors', ['contributor_ID', 'total_births', 'total_families', 'last_modified']);
+  } catch (error) {
+    container.innerHTML = '<p>Could not load contributor data.</p>';
+  }
 }
 
 init();
