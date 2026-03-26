@@ -121,6 +121,38 @@ async function performAdvancedSearch() {
   }
 }
 
+// --- Data Parsing Helpers ---
+function parseDateForSort(dateStr) {
+  if (!dateStr) return 0;
+  let str = String(dateStr).toLowerCase();
+
+  // Strip common genealogical modifiers
+  str = str.replace(/(abt\.?|about|bef\.?|before|aft\.?|after|cal|est\.?)\s*/g, '').trim();
+
+  const months = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+  let year = 0, month = 0, day = 0;
+
+  // Extract year (4 digits)
+  const yearMatch = str.match(/\b(\d{4})\b/);
+  if (yearMatch) year = parseInt(yearMatch[1], 10);
+
+  // Extract month (3 letters)
+  const monthMatch = str.match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\b/);
+  if (monthMatch) month = months[monthMatch[1]];
+
+  // Extract day (1-2 digits)
+  const parts = str.split(/[\s\-.\/]+/);
+  for (const part of parts) {
+    if (/^\d{1,2}$/.test(part) && parseInt(part, 10) <= 31) {
+      day = parseInt(part, 10);
+      break;
+    }
+  }
+
+  // Return comparable integer format: YYYYMMDD
+  return year * 10000 + month * 100 + day;
+}
+
 // --- Table Generation Helpers ---
 function renderTable(data, containerId, columns) {
   const container = document.getElementById(containerId);
@@ -165,12 +197,22 @@ function renderTable(data, containerId, columns) {
       }
 
       const asc = container._sortState.ascending ? 1 : -1;
+      const isGedcomDate = col === 'date_of_birth' || col === 'date_of_marriage';
+
       data.sort((a, b) => {
-        const valA = String(a[col] || '').toLowerCase();
-        const valB = String(b[col] || '').toLowerCase();
-        if (valA < valB) return -1 * asc;
-        if (valA > valB) return 1 * asc;
-        return 0;
+        if (isGedcomDate) {
+          const valA = parseDateForSort(a[col]);
+          const valB = parseDateForSort(b[col]);
+          if (valA < valB) return -1 * asc;
+          if (valA > valB) return 1 * asc;
+          return 0;
+        } else {
+          const valA = String(a[col] || '').toLowerCase();
+          const valB = String(b[col] || '').toLowerCase();
+          if (valA < valB) return -1 * asc;
+          if (valA > valB) return 1 * asc;
+          return 0;
+        }
       });
 
       renderTable(data, containerId, columns);
