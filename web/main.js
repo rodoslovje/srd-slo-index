@@ -14,27 +14,66 @@ async function init() {
   loading.style.display = 'none'; // Hide loading text by default
 
   try {
+    // Render initial search form into sidebar
     setupAdvancedSearchForm();
+    // Ensure sidebar is visible on desktop, or hidden on mobile
+    const sidebar = document.getElementById('sidebar');
+    if (window.innerWidth > 768) {
+      sidebar.classList.add('open'); // Always open on desktop
+    }
   } catch (err) {
     loading.textContent = 'Error initializing the application.';
     console.error(err);
   }
 }
 
-// Manage Tabs
+// --- Top Navigation & Tab Management ---
+const hamburgerBtn = document.querySelector('.hamburger-btn');
+const sidebar = document.getElementById('sidebar');
+
+hamburgerBtn.addEventListener('click', () => {
+  sidebar.classList.toggle('open');
+});
+
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     // If contributors tab is clicked, fetch and render the data
     if (btn.dataset.target === 'tab-contributors') {
       renderContributors();
+      sidebar.style.display = 'none'; // Hide sidebar for contributors
+    } else {
+      sidebar.style.display = 'block'; // Show sidebar for search tabs
+    }
+
+    // Close mobile nav if open
+    if (window.innerWidth <= 768 && sidebar.classList.contains('open')) {
+      sidebar.classList.remove('open');
     }
 
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+    // Manage sidebar sections visibility
+    document.querySelectorAll('.sidebar-section').forEach(s => s.classList.remove('active'));
+    if (btn.dataset.target === 'tab-general') {
+      document.getElementById('general-search-sidebar').classList.add('active');
+    } else if (btn.dataset.target === 'tab-advanced') {
+      document.getElementById('advanced-search-sidebar').classList.add('active');
+    }
     btn.classList.add('active');
     document.getElementById(btn.dataset.target).classList.add('active');
   });
 });
+
+function handleSearchOnEnter(event) {
+  if (event.key === 'Enter' && event.target.value.trim() !== '') {
+    // Find the button within the same search-box and click it
+    const searchButton = event.target.closest('.search-box').querySelector('button');
+    if (searchButton) {
+      searchButton.click();
+    }
+  }
+}
 
 // --- General Search ---
 document.getElementById('btn-general-search').addEventListener('click', async () => {
@@ -58,9 +97,10 @@ document.getElementById('btn-general-search').addEventListener('click', async ()
     document.getElementById('general-results').innerHTML = '<p>Search failed. Check API connection.</p>';
   }
 });
+document.getElementById('general-query').addEventListener('keydown', handleSearchOnEnter);
 
 // --- Advanced Search ---
-function setupAdvancedSearchForm() {
+function setupAdvancedSearchForm() { // This now renders into #advanced-search-sidebar
   const container = document.getElementById('adv-search-controls');
 
   const renderFields = () => {
@@ -69,7 +109,7 @@ function setupAdvancedSearchForm() {
 
     let html = `<select id="adv-search-type">
       <option value="births" ${isBirth ? 'selected' : ''}>Births</option>
-      <option value="families" ${!isBirth ? 'selected' : ''}>Families</option>
+      <option value="families" ${!isBirth ? 'selected' : ''}>Family</option>
     </select>`;
 
     cols.filter(c => c !== 'contributor').forEach(col => {
@@ -81,6 +121,9 @@ function setupAdvancedSearchForm() {
 
     document.getElementById('adv-search-type').addEventListener('change', renderFields);
     document.getElementById('btn-adv-search').addEventListener('click', performAdvancedSearch);
+    container.querySelectorAll('input[type="text"]').forEach(input => {
+      input.addEventListener('keydown', handleSearchOnEnter);
+    });
   };
   renderFields();
 }
@@ -179,11 +222,18 @@ function renderTable(data, containerId, columns, defaultSortColumn = null, defau
     const col = container._sortState.column;
     const asc = container._sortState.ascending ? 1 : -1;
     const isGedcomDate = col === 'date_of_birth' || col === 'date_of_marriage';
+    const isNumeric = ['total_births', 'total_families', 'total'].includes(col);
 
     data.sort((a, b) => {
       if (isGedcomDate) {
         const valA = parseDateForSort(a[col]);
         const valB = parseDateForSort(b[col]);
+        if (valA < valB) return -1 * asc;
+        if (valA > valB) return 1 * asc;
+        return 0;
+      } else if (isNumeric) {
+        const valA = Number(a[col] || 0);
+        const valB = Number(b[col] || 0);
         if (valA < valB) return -1 * asc;
         if (valA > valB) return 1 * asc;
         return 0;
@@ -218,11 +268,18 @@ function renderTable(data, containerId, columns, defaultSortColumn = null, defau
 
       const asc = container._sortState.ascending ? 1 : -1;
       const isGedcomDate = col === 'date_of_birth' || col === 'date_of_marriage';
+      const isNumeric = ['total_births', 'total_families', 'total'].includes(col);
 
       data.sort((a, b) => {
         if (isGedcomDate) {
           const valA = parseDateForSort(a[col]);
           const valB = parseDateForSort(b[col]);
+          if (valA < valB) return -1 * asc;
+          if (valA > valB) return 1 * asc;
+          return 0;
+        } else if (isNumeric) {
+          const valA = Number(a[col] || 0);
+          const valB = Number(b[col] || 0);
           if (valA < valB) return -1 * asc;
           if (valA > valB) return 1 * asc;
           return 0;
@@ -248,13 +305,15 @@ async function renderContributors() {
     const response = await fetch(`${API_BASE_URL}/api/contributors/`);
     const metadata = await response.json();
 
-    const dataForTable = metadata.map(m => ({
+    const dataForTable = metadata.map((m) => ({
       contributor_ID: m.name,
       total_births: m.births_count,
       total_families: m.families_count,
-      last_modified: new Date(m.last_modified).toLocaleString()
+      total: m.births_count + m.families_count,
+      last_modified: new Date(m.last_modified).toLocaleString(),
     }));
-    renderTable(dataForTable, 'table-contributors', ['contributor_ID', 'total_births', 'total_families', 'last_modified'], 'contributor_ID', true);
+    const contributorColumns = ['contributor_ID', 'total_births', 'total_families', 'total', 'last_modified'];
+    renderTable(dataForTable, 'table-contributors', contributorColumns, 'total', false);
   } catch (error) {
     container.innerHTML = '<p>Could not load contributor data.</p>';
   }

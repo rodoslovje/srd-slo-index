@@ -10,24 +10,42 @@
     <div class="container">
       <header>
         <h1>Slovenian Genealogical Index</h1>
+        <nav id="top-nav">
+          <div class="nav-title">
+            <a href="/">Slovenian Genealogical Index</a>
+          </div>
+          <div class="nav-center-buttons">
+            <button class="tab-btn active" data-target="tab-general">Search</button>
+            <button class="tab-btn" data-target="tab-advanced">Advanced Search</button>
+            <button class="tab-btn" data-target="tab-contributors">Contributors</button>
+          </div>
+          <button class="hamburger-btn">
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+        </nav>
       </header>
 
-      <div class="content-wrapper">
-        <nav id="tabs">
-          <h2>Menu</h2>
-          <button class="tab-btn active" data-target="tab-general">General Search</button>
-          <button class="tab-btn" data-target="tab-advanced">Advanced Search</button>
-          <button class="tab-btn" data-target="tab-contributors">Contributors</button>
-        </nav>
-
-        <main>
-          <div id="loading" class="loading">Loading genealogical data...</div>
-
-          <section id="tab-general" class="tab-content active">
+      <div class="content-area">
+        <aside id="sidebar">
+          <div id="general-search-sidebar" class="sidebar-section active">
             <div class="search-box">
               <input type="text" id="general-query" placeholder="Search all fields (e.g., name, place, date)..." />
               <button id="btn-general-search">Search</button>
             </div>
+          </div>
+          <div id="advanced-search-sidebar" class="sidebar-section">
+            <div class="search-box" id="adv-search-controls">
+              <!-- Controls injected by JS -->
+            </div>
+          </div>
+        </aside>
+
+        <main id="main-content">
+          <div id="loading" class="loading">Loading genealogical data...</div>
+
+          <section id="tab-general" class="tab-content active">
             <div id="general-results" class="results-container" style="display: none;">
               <h2>Births (<span id="count-general-births">0</span>)</h2>
               <div class="table-responsive" id="table-general-births"></div>
@@ -37,9 +55,6 @@
           </section>
 
           <section id="tab-advanced" class="tab-content">
-            <div class="search-box" id="adv-search-controls">
-              <!-- Controls injected by JS -->
-            </div>
             <div id="advanced-results" class="results-container" style="display: none;">
               <h2 id="adv-results-title">Results (<span id="count-adv-results">0</span>)</h2>
               <div class="table-responsive" id="table-adv-results"></div>
