@@ -51,6 +51,8 @@ document.getElementById('btn-general-search').addEventListener('click', async ()
 
     document.getElementById('count-general-births').textContent = results.births.length;
     document.getElementById('count-general-families').textContent = results.families.length;
+    document.getElementById('table-general-births')._sortState = null;
+    document.getElementById('table-general-families')._sortState = null;
     renderTable(results.births, 'table-general-births', birthColumns);
     renderTable(results.families, 'table-general-families', familyColumns);
   } catch (error) {
@@ -111,6 +113,7 @@ async function performAdvancedSearch() {
     const results = await response.json();
 
     document.getElementById('count-adv-results').textContent = results.length;
+    document.getElementById('table-adv-results')._sortState = null;
     renderTable(results, 'table-adv-results', cols);
   } catch (error) {
     console.error("Advanced search failed:", error);
@@ -126,10 +129,19 @@ function renderTable(data, containerId, columns) {
     return;
   }
 
+  // Initialize or retrieve sort state
+  if (!container._sortState) {
+    container._sortState = { column: null, ascending: true };
+  }
+
   let html = '<table><thead><tr>';
   columns.forEach(col => {
     const header = col.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-    html += `<th>${header}</th>`;
+    let sortIndicator = '';
+    if (container._sortState.column === col) {
+      sortIndicator = container._sortState.ascending ? ' ▲' : ' ▼';
+    }
+    html += `<th data-col="${col}" class="sortable">${header}${sortIndicator}</th>`;
   });
   html += '</tr></thead><tbody>';
 
@@ -140,6 +152,30 @@ function renderTable(data, containerId, columns) {
   });
   html += '</tbody></table>';
   container.innerHTML = html;
+
+  // Add click event listeners for sorting
+  container.querySelectorAll('th.sortable').forEach(th => {
+    th.addEventListener('click', () => {
+      const col = th.dataset.col;
+      if (container._sortState.column === col) {
+        container._sortState.ascending = !container._sortState.ascending;
+      } else {
+        container._sortState.column = col;
+        container._sortState.ascending = true;
+      }
+
+      const asc = container._sortState.ascending ? 1 : -1;
+      data.sort((a, b) => {
+        const valA = String(a[col] || '').toLowerCase();
+        const valB = String(b[col] || '').toLowerCase();
+        if (valA < valB) return -1 * asc;
+        if (valA > valB) return 1 * asc;
+        return 0;
+      });
+
+      renderTable(data, containerId, columns);
+    });
+  });
 }
 
 async function renderContributors() {
@@ -156,6 +192,7 @@ async function renderContributors() {
       total_families: m.families_count,
       last_modified: new Date(m.last_modified).toLocaleString()
     }));
+    document.getElementById('table-contributors')._sortState = null;
     renderTable(dataForTable, 'table-contributors', ['contributor_ID', 'total_births', 'total_families', 'last_modified']);
   } catch (error) {
     container.innerHTML = '<p>Could not load contributor data.</p>';
