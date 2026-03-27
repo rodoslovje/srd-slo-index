@@ -82,7 +82,7 @@ const translations = {
     col_surname: 'Priimek',
     col_date_of_birth: 'Datum rojstva',
     col_place_of_birth: 'Kraj rojstva',
-    col_contributor: 'Prispevek',
+    col_contributor: 'Dajalec',
     col_husband_name: 'Ime moža',
     col_husband_surname: 'Priimek moža',
     col_wife_name: 'Ime žene',
