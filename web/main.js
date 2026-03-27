@@ -94,8 +94,10 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     document.getElementById('advanced-results').style.display = 'none';
     showIntros();
 
-    // Close sidebar on mobile when a tab is selected
-    if (window.innerWidth <= 768 && sidebar.classList.contains('open')) {
+    // Open sidebar for search tabs, close it for contributors
+    if (targetTab === 'tab-general' || targetTab === 'tab-advanced') {
+      sidebar.classList.add('open');
+    } else {
       sidebar.classList.remove('open');
     }
 

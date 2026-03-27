@@ -134,7 +134,7 @@ h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 
 
 .search-box input,
 .search-box select,
-.search-box button {
+.search-box button:not(.clear-btn) {
   padding: 10px;
   font-size: 1rem;
   border: 1px solid var(--border);
@@ -162,49 +162,65 @@ h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 
 
 .clear-btn {
   position: absolute;
-  right: 5px;
+  right: 4px;
   top: 50%;
   transform: translateY(-50%);
-  background: transparent;
+  width: 22px;
+  height: 22px;
+  background: #e0e0e0;
   border: none;
-  color: #888;
+  border-radius: 50%;
+  color: #555;
   cursor: pointer;
-  font-size: 1.4rem;
-  line-height: 1;
-  padding: 0 5px;
+  font-size: 0.95rem;
+  line-height: 22px;
+  text-align: center;
+  padding: 0;
   display: none; /* Hidden by default */
 }
 
-/* --- Language Switcher --- */
-.lang-switcher {
-  position: relative;
-  margin-right: 8px;
+.clear-btn:hover {
+  background: #c8c8c8;
+  color: #222;
+  opacity: 1;
 }
 
-.lang-toggle {
+/* --- Shared nav button style (lang toggle + hamburger) --- */
+.nav-icon-btn {
   display: flex;
   align-items: center;
-  gap: 4px;
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 5px;
   color: rgba(255, 255, 255, 0.85);
-  padding: 5px 9px;
-  font-size: 0.875rem;
-  border-radius: 4px;
   cursor: pointer;
+  padding: 6px 10px;
+  font-size: 0.875rem;
   white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s;
 }
 
-.lang-toggle:hover {
+.nav-icon-btn:hover {
   background: rgba(255, 255, 255, 0.12);
   border-color: rgba(255, 255, 255, 0.6);
   color: white;
   opacity: 1;
 }
 
+/* --- Language Switcher --- */
+.lang-switcher {
+  position: relative;
+  margin-right: 6px;
+}
+
+.lang-toggle {
+  gap: 5px;
+}
+
 .lang-arrow {
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   opacity: 0.7;
+  margin-left: 1px;
 }
 
 .lang-dropdown {
@@ -214,11 +230,11 @@ h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 
   right: 0;
   background: var(--primary);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 4px;
+  border-radius: 5px;
   min-width: 100%;
   z-index: 200;
   overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
 }
 
 .lang-dropdown.open {
@@ -246,29 +262,29 @@ h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 
 
 .lang-option.active {
   color: white;
-  font-weight: bold;
+  font-weight: 600;
   opacity: 1;
 }
 
 /* --- Hamburger Menu --- */
 .hamburger-btn {
-  display: flex;
   flex-direction: column;
-  justify-content: space-around;
-  width: 2rem;
-  height: 2rem;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  z-index: 10; /* Ensure it's above other elements */
+  justify-content: center;
+  gap: 5px;
+  z-index: 10;
 }
 
 .hamburger-btn span {
-  width: 2rem;
-  height: 0.25rem;
+  display: block;
+  width: 18px;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 2px;
+  transition: background 0.15s;
+}
+
+.hamburger-btn:hover span {
   background: white;
-  border-radius: 10px;
 }
 
 /* --- New Layout: Content Area & Sidebar --- */
@@ -365,7 +381,7 @@ body.contributors-view #sidebar {
   .search-box {
     flex-direction: column;
   }
-  .search-box input, .search-box select, .search-box button {
+  .search-box input, .search-box select, .search-box button:not(.clear-btn) {
     width: 100%;
   }
 }
