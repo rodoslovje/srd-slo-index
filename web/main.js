@@ -16,26 +16,42 @@ async function init() {
   try {
     // Render initial search form into sidebar
     setupAdvancedSearchForm();
+    // Ensure sidebar is visible on desktop, or hidden on mobile
+    const sidebar = document.getElementById('sidebar');
+    if (window.innerWidth > 768) {
+      sidebar.classList.add('open'); // Always open on desktop
+    }
   } catch (err) {
     loading.textContent = 'Error initializing the application.';
     console.error(err);
   }
 }
 
-// --- Top Navigation & Mobile Menu ---
+// --- Top Navigation & Tab Management ---
 const hamburgerBtn = document.querySelector('.hamburger-btn');
-const sidebar = document.getElementById('sidebar');
+const navButtons = document.querySelector('.nav-buttons');
 
 hamburgerBtn.addEventListener('click', () => {
-  sidebar.classList.toggle('open');
+  navButtons.classList.toggle('open');
 });
 
-// --- Tab Management ---
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     // If contributors tab is clicked, fetch and render the data
     if (btn.dataset.target === 'tab-contributors') {
       renderContributors();
+      document.getElementById('sidebar').style.display = 'none'; // Hide sidebar for contributors
+    } else {
+      document.getElementById('sidebar').style.display = 'block'; // Show sidebar for search tabs
+    }
+
+    // Clear previous search results when switching tabs
+    document.getElementById('general-results').style.display = 'none';
+    document.getElementById('advanced-results').style.display = 'none';
+
+    // Close mobile nav if open
+    if (window.innerWidth <= 768) { // Only close on mobile
+      document.getElementById('sidebar').classList.remove('open');
     }
 
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -48,7 +64,6 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     } else if (btn.dataset.target === 'tab-advanced') {
       document.getElementById('advanced-search-sidebar').classList.add('active');
     }
-
     btn.classList.add('active');
     document.getElementById(btn.dataset.target).classList.add('active');
   });
@@ -66,7 +81,7 @@ function handleSearchOnEnter(event) {
 
 // --- General Search ---
 document.getElementById('btn-general-search').addEventListener('click', async () => {
-  const query = document.getElementById('general-query').value.toLowerCase().trim();
+  const query = document.getElementById('general-query').value.trim();
   if (!query) return;
 
   document.getElementById('general-results').style.display = 'block';
@@ -88,8 +103,9 @@ document.getElementById('btn-general-search').addEventListener('click', async ()
 });
 document.getElementById('general-query').addEventListener('keydown', handleSearchOnEnter);
 
+
 // --- Advanced Search ---
-function setupAdvancedSearchForm() {
+function setupAdvancedSearchForm() { // This now renders into #advanced-search-sidebar
   const container = document.getElementById('adv-search-controls');
 
   const renderFields = () => {
@@ -98,7 +114,7 @@ function setupAdvancedSearchForm() {
 
     let html = `<select id="adv-search-type">
       <option value="births" ${isBirth ? 'selected' : ''}>Births</option>
-      <option value="families" ${!isBirth ? 'selected' : ''}>Family</option>
+      <option value="families" ${!isBirth ? 'selected' : ''}>Families</option>
     </select>`;
 
     cols.filter(c => c !== 'contributor').forEach(col => {
