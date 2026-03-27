@@ -94,11 +94,14 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     document.getElementById('advanced-results').style.display = 'none';
     showIntros();
 
-    // Open sidebar for search tabs on desktop; close it for contributors
-    if (targetTab === 'tab-general' || targetTab === 'tab-advanced') {
-      if (window.innerWidth > 768) sidebar.classList.add('open');
-    } else {
-      sidebar.classList.remove('open');
+    // On desktop: open sidebar for search tabs, close it for contributors
+    // On mobile: never auto-change sidebar state — hamburger controls it
+    if (window.innerWidth > 768) {
+      if (targetTab === 'tab-general' || targetTab === 'tab-advanced') {
+        sidebar.classList.add('open');
+      } else {
+        sidebar.classList.remove('open');
+      }
     }
 
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
