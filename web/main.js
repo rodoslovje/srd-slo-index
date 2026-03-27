@@ -94,9 +94,9 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     document.getElementById('advanced-results').style.display = 'none';
     showIntros();
 
-    // Open sidebar for search tabs, close it for contributors
+    // Open sidebar for search tabs on desktop; close it for contributors
     if (targetTab === 'tab-general' || targetTab === 'tab-advanced') {
-      sidebar.classList.add('open');
+      if (window.innerWidth > 768) sidebar.classList.add('open');
     } else {
       sidebar.classList.remove('open');
     }
@@ -133,7 +133,7 @@ async function init() {
     setupAdvancedSearchForm();
     renderIntros();
 
-    sidebar.classList.add('open');
+    if (window.innerWidth > 768) sidebar.classList.add('open');
 
     // Infer active tab from URL params
     const urlParams = new URLSearchParams(window.location.search);
