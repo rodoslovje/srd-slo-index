@@ -189,6 +189,22 @@ h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 
   display: block;
 }
 
+/* Tab Content Visibility */
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+/* --- Layout for Full-Width Contributors Page --- */
+/* Hide hamburger and sidebar when contributors tab is active */
+body.contributors-view .hamburger-btn,
+body.contributors-view #sidebar {
+  display: none;
+}
+
 /* --- Mobile Responsiveness --- */
 @media (max-width: 768px) {
   .header-nav {

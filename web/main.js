@@ -21,6 +21,9 @@ async function init() {
     if (window.innerWidth > 768) {
       sidebar.classList.add('open'); // Always open on desktop
     }
+
+    // Activate the general search tab by default on load
+    document.querySelector('.tab-btn[data-target="tab-general"]').click();
   } catch (err) {
     loading.textContent = 'Error initializing the application.';
     console.error(err);
@@ -37,9 +40,15 @@ hamburgerBtn.addEventListener('click', () => {
 
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
+    const targetTab = btn.dataset.target;
+
     // If contributors tab is clicked, fetch and render the data
-    if (btn.dataset.target === 'tab-contributors') {
+    // Also, add a class to the body to adjust the layout for a full-width view.
+    if (targetTab === 'tab-contributors') {
+      document.body.classList.add('contributors-view');
       renderContributors();
+    } else {
+      document.body.classList.remove('contributors-view');
     }
 
     // Clear previous search results when switching tabs
@@ -56,15 +65,15 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 
     // Manage sidebar sections visibility
     document.querySelectorAll('.sidebar-section').forEach(s => s.classList.remove('active'));
-    if (btn.dataset.target === 'tab-general') {
+    if (targetTab === 'tab-general') {
       document.getElementById('general-search-sidebar').classList.add('active');
-    } else if (btn.dataset.target === 'tab-advanced') {
+    } else if (targetTab === 'tab-advanced') {
       document.getElementById('advanced-search-sidebar').classList.add('active');
     }
 
     // Add active class to all buttons representing this tab (both header and sidebar)
-    document.querySelectorAll(`.tab-btn[data-target="${btn.dataset.target}"]`).forEach(b => b.classList.add('active'));
-    document.getElementById(btn.dataset.target).classList.add('active');
+    document.querySelectorAll(`.tab-btn[data-target="${targetTab}"]`).forEach(b => b.classList.add('active'));
+    document.getElementById(targetTab).classList.add('active');
   });
 });
 
