@@ -39,11 +39,13 @@ def read_contributors(db: Session = Depends(get_db)):
 
 
 @app.get("/api/search/general")
-def search_general(q: Optional[str] = None, db: Session = Depends(get_db)):
+def search_general(
+    q: Optional[str] = None, limit: int = 500, db: Session = Depends(get_db)
+):
     if not q:
         return {"births": [], "families": []}
 
-    results = crud.search_all(db, query=q)
+    results = crud.search_all(db, query=q, limit=limit)
     return results
 
 
@@ -53,9 +55,12 @@ def search_advanced_births(
     surname: Optional[str] = None,
     date_of_birth: Optional[str] = None,
     place_of_birth: Optional[str] = None,
+    limit: int = 500,
     db: Session = Depends(get_db),
 ):
-    return crud.search_advanced_births(db, name, surname, date_of_birth, place_of_birth)
+    return crud.search_advanced_births(
+        db, name, surname, date_of_birth, place_of_birth, limit=limit
+    )
 
 
 @app.get("/api/search/advanced/families", response_model=List[schemas.Family])
@@ -66,6 +71,7 @@ def search_advanced_families(
     wife_surname: Optional[str] = None,
     date_of_marriage: Optional[str] = None,
     place_of_marriage: Optional[str] = None,
+    limit: int = 500,
     db: Session = Depends(get_db),
 ):
     return crud.search_advanced_families(
@@ -76,4 +82,5 @@ def search_advanced_families(
         wife_surname,
         date_of_marriage,
         place_of_marriage,
+        limit=limit,
     )

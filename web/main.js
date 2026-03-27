@@ -128,7 +128,7 @@ document.getElementById('btn-general-search').addEventListener('click', async ()
   document.getElementById('table-general-families').innerHTML = '<p>Searching...</p>';
 
   try {
-    const response = await fetch(`${API_BASE_URL}/api/search/general?q=${encodeURIComponent(query)}`);
+    const response = await fetch(`${API_BASE_URL}/api/search/general?q=${encodeURIComponent(query)}&limit=500`);
     const results = await response.json();
 
     document.getElementById('count-general-births').textContent = results.births.length;
@@ -226,6 +226,8 @@ async function performAdvancedSearch() {
     document.getElementById('count-adv-results').textContent = '0';
     return;
   }
+
+  params.append('limit', '500');
 
   const endpoint = isBirth ? 'births' : 'families';
   try {
