@@ -14,6 +14,11 @@ async function init() {
   loading.style.display = 'none'; // Hide loading text by default
 
   try {
+    // Make general search input clearable and handle Enter key
+    setupClearableInput(document.getElementById('general-query'), () => {
+      document.getElementById('btn-general-search').click();
+    });
+
     // Render initial search form into sidebar
     setupAdvancedSearchForm();
     // Ensure sidebar is visible on desktop, or hidden on mobile
@@ -26,6 +31,44 @@ async function init() {
     loading.textContent = 'Error initializing the application.';
     console.error(err);
   }
+}
+
+/**
+ * Wraps an input element to add a clear button and handles Enter key presses.
+ * @param {HTMLElement} inputElement The input to make clearable.
+ * @param {Function} onEnterCallback The function to call when Enter is pressed.
+ */
+function setupClearableInput(inputElement, onEnterCallback) {
+  if (!inputElement) return;
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'input-wrapper';
+
+  // Insert wrapper and move input inside it
+  inputElement.parentNode.insertBefore(wrapper, inputElement);
+  wrapper.appendChild(inputElement);
+
+  const clearBtn = document.createElement('button');
+  clearBtn.type = 'button';
+  clearBtn.className = 'clear-btn';
+  clearBtn.innerHTML = '&times;';
+  wrapper.appendChild(clearBtn);
+
+  const toggleClearBtn = () => {
+    clearBtn.style.display = inputElement.value ? 'block' : 'none';
+  };
+
+  clearBtn.addEventListener('click', () => {
+    inputElement.value = '';
+    toggleClearBtn();
+    inputElement.focus();
+  });
+
+  inputElement.addEventListener('input', toggleClearBtn);
+  inputElement.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' && onEnterCallback) onEnterCallback();
+  });
+  toggleClearBtn(); // Initial check for pre-filled values
 }
 
 // --- Top Navigation & Tab Management ---
@@ -75,16 +118,6 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
   });
 });
 
-function handleSearchOnEnter(event) {
-  if (event.key === 'Enter' && event.target.value.trim() !== '') {
-    // Find the button within the same search-box and click it
-    const searchButton = event.target.closest('.search-box').querySelector('button');
-    if (searchButton) {
-      searchButton.click();
-    }
-  }
-}
-
 // --- General Search ---
 document.getElementById('btn-general-search').addEventListener('click', async () => {
   const query = document.getElementById('general-query').value.trim();
@@ -107,15 +140,13 @@ document.getElementById('btn-general-search').addEventListener('click', async ()
     document.getElementById('general-results').innerHTML = '<p>Search failed. Check API connection.</p>';
   }
 });
-document.getElementById('general-query').addEventListener('keydown', handleSearchOnEnter);
-
 
 // --- Advanced Search ---
-function setupAdvancedSearchForm() { // This now renders into #advanced-search-sidebar
+function setupAdvancedSearchForm() {
   const container = document.getElementById('adv-search-controls');
 
   const renderFields = () => {
-    const isBirth = document.getElementById('adv-search-type')?.value !== 'families'; // Default to births
+    const isBirth = document.getElementById('adv-search-type')?.value !== 'families';
     const cols = isBirth ? birthColumns : familyColumns;
 
     let html = `<select id="adv-search-type">
@@ -124,18 +155,55 @@ function setupAdvancedSearchForm() { // This now renders into #advanced-search-s
     </select>`;
 
     cols.filter(c => c !== 'contributor').forEach(col => {
-        const label = col.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-        html += `<input type="text" id="adv-${col}" placeholder="${label}" />`;
+      const label = col.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+      html += `<div class="input-wrapper">
+                 <input type="text" id="adv-${col}" placeholder="${label}" />
+                 <button type="button" class="clear-btn">&times;</button>
+               </div>`;
     });
     html += `<button id="btn-adv-search">Search</button>`;
     container.innerHTML = html;
-
-    document.getElementById('adv-search-type').addEventListener('change', renderFields);
-    document.getElementById('btn-adv-search').addEventListener('click', performAdvancedSearch);
-    container.querySelectorAll('input[type="text"]').forEach(input => {
-      input.addEventListener('keydown', handleSearchOnEnter);
-    });
   };
+
+  // --- Event Delegation for the entire form ---
+  container.addEventListener('click', (event) => {
+    // Handle main search button click
+    if (event.target.matches('#btn-adv-search')) {
+      performAdvancedSearch();
+    }
+    // Handle clear button click
+    if (event.target.matches('.clear-btn')) {
+      const input = event.target.previousElementSibling;
+      if (input) {
+        input.value = '';
+        event.target.style.display = 'none';
+        input.focus();
+      }
+    }
+  });
+
+  // Handle dropdown change
+  container.addEventListener('change', (event) => {
+    if (event.target.matches('#adv-search-type')) { renderFields(); }
+  });
+
+  // Show/hide clear buttons on input
+  container.addEventListener('input', (event) => {
+    if (event.target.matches('input[type="text"]')) {
+      const clearBtn = event.target.nextElementSibling;
+      if (clearBtn?.matches('.clear-btn')) {
+        clearBtn.style.display = event.target.value ? 'block' : 'none';
+      }
+    }
+  });
+
+  // Handle 'Enter' key press
+  container.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' && event.target.matches('input[type="text"]')) {
+      performAdvancedSearch();
+    }
+  });
+
   renderFields();
 }
 
