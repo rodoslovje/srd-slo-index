@@ -116,6 +116,23 @@ h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 
   text-decoration: none;
 }
 
+.intro-logo-link {
+  display: inline-block;
+  margin-top: 0.5rem;
+}
+
+.intro-logo {
+  max-height: 80px;
+  width: auto;
+  display: block;
+  opacity: 0.85;
+  transition: opacity 0.2s;
+}
+
+.intro-logo:hover {
+  opacity: 1;
+}
+
 .intro-text .intro-warning {
   background: #fff8e1;
   border-left: 4px solid #f0a500;

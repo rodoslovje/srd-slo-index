@@ -39,11 +39,15 @@ function setupClearableInput(inputElement, onEnterCallback) {
 // --- Intro text ---
 
 export function renderIntros() {
-  const html = getIntro().map(p =>
+  const paragraphs = getIntro().map(p =>
     p.warning
       ? `<p class="intro-warning">${p.text}</p>`
       : `<p>${p.text}</p>`
   ).join('');
+  const logo = `<a href="https://rodoslovje.si" target="_blank" rel="noopener" class="intro-logo-link">
+    <img src="/srd-logo.png" alt="Slovensko rodoslovno društvo" class="intro-logo" />
+  </a>`;
+  const html = paragraphs + logo;
   document.getElementById('intro-general').innerHTML = html;
   document.getElementById('intro-advanced').innerHTML = html;
 }
