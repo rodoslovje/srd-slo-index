@@ -29,10 +29,10 @@ async function init() {
 
 // --- Top Navigation & Tab Management ---
 const hamburgerBtn = document.querySelector('.hamburger-btn');
-const navButtons = document.querySelector('.nav-buttons');
+const sidebar = document.getElementById('sidebar');
 
 hamburgerBtn.addEventListener('click', () => {
-  navButtons.classList.toggle('open');
+  sidebar.classList.toggle('open');
 });
 
 document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -40,9 +40,6 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     // If contributors tab is clicked, fetch and render the data
     if (btn.dataset.target === 'tab-contributors') {
       renderContributors();
-      document.getElementById('sidebar').style.display = 'none'; // Hide sidebar for contributors
-    } else {
-      document.getElementById('sidebar').style.display = 'block'; // Show sidebar for search tabs
     }
 
     // Clear previous search results when switching tabs
@@ -50,8 +47,8 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     document.getElementById('advanced-results').style.display = 'none';
 
     // Close mobile nav if open
-    if (window.innerWidth <= 768) { // Only close on mobile
-      document.getElementById('sidebar').classList.remove('open');
+    if (window.innerWidth <= 768 && sidebar.classList.contains('open')) { // Only close on mobile
+      sidebar.classList.remove('open');
     }
 
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
