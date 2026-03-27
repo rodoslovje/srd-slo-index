@@ -2,6 +2,7 @@ import { t, onLanguageChange } from './i18n.js';
 import { renderTable } from './table.js';
 import { API_BASE_URL, birthColumns, familyColumns } from './config.js';
 import { updateURL, PARAM_MAP, PARAM_MAP_REVERSE } from './url.js';
+import { hideIntro } from './main.js';
 
 // Last search results kept so they can be re-rendered on language change
 let lastGeneralResults = null;
@@ -18,7 +19,7 @@ async function performGeneralSearch() {
   if (!query) return;
 
   updateURL({ q: query });
-
+  hideIntro('intro-general');
   document.getElementById('general-results').style.display = 'block';
   document.getElementById('table-general-births').innerHTML = `<p>${t('searching')}</p>`;
   document.getElementById('table-general-families').innerHTML = `<p>${t('searching')}</p>`;
@@ -57,6 +58,8 @@ async function performAdvancedSearch() {
     document.getElementById('count-adv-results').textContent = '0';
     return;
   }
+
+  hideIntro('intro-advanced');
 
   // Build compact URL: t=birth/family + short field names
   const shortParams = { t: isBirth ? 'birth' : 'family' };

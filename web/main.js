@@ -1,4 +1,4 @@
-import { t, initI18n, onLanguageChange } from './i18n.js';
+import { t, initI18n, onLanguageChange, getIntro } from './i18n.js';
 import { renderContributors, refreshContributorsIfVisible } from './contributors.js';
 import { setupGeneralSearch, setupAdvancedSearchForm, restoreFromURL } from './search.js';
 import { updateURL } from './url.js';
@@ -36,6 +36,39 @@ function setupClearableInput(inputElement, onEnterCallback) {
   toggleClearBtn();
 }
 
+// --- Intro text ---
+
+export function renderIntros() {
+  const html = getIntro().map(p =>
+    p.warning
+      ? `<p class="intro-warning">${p.text}</p>`
+      : `<p>${p.text}</p>`
+  ).join('');
+  document.getElementById('intro-general').innerHTML = html;
+  document.getElementById('intro-advanced').innerHTML = html;
+}
+
+export function hideIntro(id) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = 'none';
+}
+
+export function showIntros() {
+  ['intro-general', 'intro-advanced'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = '';
+  });
+}
+
+// Intercept intro links to contributors tab so they switch tabs without a page reload
+document.addEventListener('click', (e) => {
+  const link = e.target.closest('a[href="?t=contributors"]');
+  if (link) {
+    e.preventDefault();
+    document.querySelector('.tab-btn[data-target="tab-contributors"]')?.click();
+  }
+});
+
 // --- Hamburger ---
 
 const hamburgerBtn = document.querySelector('.hamburger-btn');
@@ -59,6 +92,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 
     document.getElementById('general-results').style.display = 'none';
     document.getElementById('advanced-results').style.display = 'none';
+    showIntros();
 
     // Close sidebar on mobile when a tab is selected
     if (window.innerWidth <= 768 && sidebar.classList.contains('open')) {
@@ -95,6 +129,7 @@ async function init() {
 
     setupGeneralSearch();
     setupAdvancedSearchForm();
+    renderIntros();
 
     sidebar.classList.add('open');
 
@@ -109,8 +144,11 @@ async function init() {
     // Restore search fields and trigger search if URL contains query params
     restoreFromURL();
 
-    // Refresh contributors table column headers on language change
-    onLanguageChange(() => refreshContributorsIfVisible());
+    // Re-render intro and contributors table on language change
+    onLanguageChange(() => {
+      renderIntros();
+      refreshContributorsIfVisible();
+    });
   } catch (err) {
     loading.style.display = 'block';
     loading.textContent = t('init_error');

@@ -12,7 +12,7 @@
         <h1>Slovenian Genealogical Index</h1>
         <nav id="top-nav">
           <div class="nav-title">
-            <a href="/">Slovenian Genealogical Index</a>
+            <a href="/" data-i18n="site_title">Slovenian Genealogical Index</a>
           </div>
           <div class="header-nav">
             <button class="tab-btn active" data-target="tab-general" data-i18n="tab_search">Search</button>
@@ -43,6 +43,7 @@
           <div id="loading" class="loading" data-i18n="loading">Loading genealogical data...</div>
 
           <section id="tab-general" class="tab-content active">
+            <div id="intro-general" class="intro-text"></div>
             <div id="general-results" class="results-container" style="display: none;">
               <h2><span data-i18n="results_births">Births</span> (<span id="count-general-births">0</span>)</h2>
               <div class="table-responsive" id="table-general-births"></div>
@@ -52,6 +53,7 @@
           </section>
 
           <section id="tab-advanced" class="tab-content">
+            <div id="intro-advanced" class="intro-text"></div>
             <div id="advanced-results" class="results-container" style="display: none;">
               <h2><span data-i18n="results_title">Results</span> (<span id="count-adv-results">0</span>)</h2>
               <div class="table-responsive" id="table-adv-results"></div>

@@ -96,6 +96,35 @@ h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 
 
 .loading { text-align: center; font-size: 1.2rem; color: var(--secondary); padding: 2rem; }
 
+/* --- Intro text --- */
+.intro-text {
+  max-width: 780px;
+  line-height: 1.7;
+  color: #444;
+  padding-bottom: 1rem;
+}
+
+.intro-text p {
+  margin: 0 0 1em;
+}
+
+.intro-text a {
+  color: var(--secondary);
+}
+
+.intro-text a:hover {
+  text-decoration: none;
+}
+
+.intro-text .intro-warning {
+  background: #fff8e1;
+  border-left: 4px solid #f0a500;
+  padding: 0.75em 1em;
+  border-radius: 0 4px 4px 0;
+  color: #5a3e00;
+  font-size: 0.95rem;
+}
+
 .search-box {
   margin-bottom: 20px;
   display: flex;

@@ -1,5 +1,8 @@
 const translations = {
   en: {
+    // Site title
+    site_title: 'Slovenian Genealogical Index',
+
     // Navigation tabs
     tab_search: 'Search',
     tab_advanced: 'Advanced Search',
@@ -45,6 +48,9 @@ const translations = {
     col_last_modified: 'Last Change',
   },
   sl: {
+    // Site title
+    site_title: 'Slovenski rodoslovni indeks',
+
     // Navigation tabs
     tab_search: 'Iskanje',
     tab_advanced: 'Napredno iskanje',
@@ -91,6 +97,29 @@ const translations = {
   },
 };
 
+// Intro paragraphs shown on empty Search and Advanced Search tabs.
+// { text: string (may contain HTML), warning?: true }
+const introData = {
+  en: [
+    { text: 'The <strong>Slovenian Genealogical Index</strong> of surnames, given names, dates and places of birth is intended for genealogists who wish to determine whether persons appearing in their family trees have already been recorded in another genealogical register. For this purpose there are many more extensive databases maintained by our western colleagues. Searchers from Slovenia will not find many points of connection in foreign databases for the time being — but it is still worth trying.' },
+    { text: 'The probability of overlap with data contributed for comparative purposes by members of the <a href="https://rodoslovje.si" target="_blank" rel="noopener">Slovenian Genealogical Society</a> is considerably higher.' },
+    { text: 'The list of surnames, given names, dates and places of birth is compiled from a merged file to which many genealogists, listed on the <a href="?t=contributors">Contributors</a> page, have contributed the results of their work.' },
+    { text: 'The <strong>marriage index</strong> also includes parents who were never married or who never even lived together.' },
+    { text: 'Warning! No individual, nor the Slovenian Genealogical Society, can vouch for the accuracy of the data! It must be borne in mind that only documents issued by an authorised official have legal validity. The data collected here was entered by individuals based on their own knowledge or the knowledge of others who provided the data; it was gathered from publications, and primarily from private and public archives, civil and ecclesiastical records.', warning: true },
+    { text: 'The broader aspects of genealogical work and the publication of genealogical research results have been discussed in the Slovenian Genealogical Society on several occasions, and our views on these aspects have been published in the journal <a href="https://rodoslovje.si/drevesa-revija/" target="_blank" rel="noopener">Drevesa</a>. The more important contributions are summarised in <a href="http://www2.arnes.si/%7Ekrsrd1/Drustveni_pogledi.htm" target="_blank" rel="noopener">Society Perspectives</a>.' },
+    { text: 'If anyone else would like to join the existing contributors with the results of their work, they should bring their GEDCOM file to the society\'s computer or send it by <a href="mailto:martin.mali@siol.net">email</a> to the administrator.' },
+  ],
+  sl: [
+    { text: '<strong>Slovenski rodoslovni indeks</strong> priimkov, imen, datumov in krajev rojstva je namenjen rodoslovcem, ki bi želeli ugotoviti, ali so osebe, ki se pojavljajo v njihovih rodovnikih, že vpisane v kakšni drugi rodoslovni evidenci. Za ta namen sicer obstojajo številne obsežnejše podatkovne zbirke, ki jih vzdržujejo naši zahodni kolegi. Iskalci iz Slovenije v tujih zbirkah zaenkrat ne bodo našli veliko stičnih točk. Poskusiti pa je vseeno vredno.' },
+    { text: 'Precej večja pa je verjetnost prekrivanja s podatki, ki jih za primerjalni namen posredujejo v skupno zalogo rodoslovnih datotek člani <a href="https://rodoslovje.si" target="_blank" rel="noopener">Slovenskega rodoslovnega društva</a>.' },
+    { text: 'Spisek priimkov, imen, datumov in krajev rojstva je narejen iz združene datoteke, v katero so rezultate svojega dela posredovali številni rodoslovci, ki so navedeni na strani <a href="?t=contributors">Dajalci/Contributors</a>.' },
+    { text: '<strong>Indeks porok</strong> vsebuje tudi starše, ki nikoli niso bili poročeni ali celo nikoli niso živeli skupaj.' },
+    { text: 'Opozorilo! Za verodostojnost podatkov ne more jamčiti noben posameznik kot tudi ne Slovensko rodoslovno društvo! Zavedati se je treba, da imajo zakonsko veljavo samo dokumenti, ki jih izda za to pooblaščena uradna oseba. Tu zbrani podatki so nastali tako, da so jih vnašali posamezniki po lastnem poznavanju ali poznavanju drugih oseb, ki so jim posredovale podatke, nabirali so jih v objavah, predvsem pa v zasebnih in javnih arhivih, civilnih in cerkvenih.', warning: true },
+    { text: 'Širše vidike rodoslovnega dela in objavljanja rezultatov rodoslovnih raziskav smo v Slovenskem rodoslovnem društvu večkrat obravnavali in poglede na te vidike objavljali v časopisu <a href="https://rodoslovje.si/drevesa-revija/" target="_blank" rel="noopener">Drevesa</a>. Pomembnejše prispevke povzemamo v <a href="http://www2.arnes.si/%7Ekrsrd1/Drustveni_pogledi.htm" target="_blank" rel="noopener">Društvenih pogledih</a>.' },
+    { text: 'Če bi se dosedanjim sodelavcem želel še kdo pridružiti z rezultati svojega dela, naj svojo GEDCOM datoteko prinese na društveni računalnik ali jo po <a href="mailto:martin.mali@siol.net">e-pošti</a> pošlje administratorju.' },
+  ],
+};
+
 const LANG_META = {
   en: { flag: '🇬🇧', code: 'EN' },
   sl: { flag: '🇸🇮', code: 'SL' },
@@ -111,6 +140,11 @@ export function t(key) {
   return (translations[currentLang]?.[key]) ?? (translations.en?.[key]) ?? key;
 }
 
+/** Returns the intro paragraphs for the current language. */
+export function getIntro() {
+  return introData[currentLang] || introData.en;
+}
+
 export function getCurrentLang() {
   return currentLang;
 }
@@ -129,23 +163,23 @@ export function setLanguage(lang) {
 }
 
 function applyStaticTranslations() {
-  // Update all elements with data-i18n attribute
   document.querySelectorAll('[data-i18n]').forEach(el => {
     el.textContent = t(el.dataset.i18n);
   });
-  // Update all placeholder attributes
   document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
     el.placeholder = t(el.dataset.i18nPlaceholder);
   });
 
-  // Update lang toggle button to show current language
+  // Update page title and nav title
+  document.title = t('site_title');
+
+  // Update lang toggle button
   const meta = LANG_META[currentLang];
   const flagEl = document.querySelector('#lang-toggle .lang-flag');
   const codeEl = document.querySelector('#lang-toggle .lang-code');
   if (flagEl) flagEl.textContent = meta.flag;
   if (codeEl) codeEl.textContent = meta.code;
 
-  // Mark active option in dropdown
   document.querySelectorAll('.lang-option').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.lang === currentLang);
   });
@@ -166,7 +200,6 @@ export function initI18n() {
     dropdown.classList.toggle('open');
   });
 
-  // Close dropdown when clicking outside
   document.addEventListener('click', () => dropdown.classList.remove('open'));
 
   document.querySelectorAll('.lang-option').forEach(btn => {
