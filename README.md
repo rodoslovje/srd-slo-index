@@ -58,3 +58,11 @@ You can preview the built application locally with:
 ```bash
 yarn preview
 ```
+
+## 4. Updating the API/Backend
+
+If you make changes to the backend code (e.g., in backend/), you need to rebuild the Docker image and restart the container to apply those changes. Run the following command from the project root:
+
+```bash
+docker compose up -d --build
+```
