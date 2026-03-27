@@ -8,12 +8,12 @@ const translations = {
     // Search controls
     search_placeholder: 'Search all fields (e.g., name, place, date)...',
     search_btn: 'Search',
-    adv_type_births: 'Births',
-    adv_type_families: 'Families',
+    adv_type_births: 'Birth',
+    adv_type_families: 'Family',
 
     // Result section headings
-    results_births: 'Births',
-    results_families: 'Families',
+    results_births: 'Birth',
+    results_families: 'Family',
     results_title: 'Results',
 
     // Status messages
@@ -38,27 +38,27 @@ const translations = {
     col_wife_surname: 'Wife Surname',
     col_date_of_marriage: 'Date of Marriage',
     col_place_of_marriage: 'Place of Marriage',
-    col_contributor_ID: 'Contributor ID',
-    col_total_births: 'Total Births',
-    col_total_families: 'Total Families',
+    col_contributor_ID: 'Contributor',
+    col_total_births: 'Birth',
+    col_total_families: 'Family',
     col_total: 'Total',
-    col_last_modified: 'Last Modified',
+    col_last_modified: 'Last Change',
   },
   sl: {
     // Navigation tabs
     tab_search: 'Iskanje',
     tab_advanced: 'Napredno iskanje',
-    tab_contributors: 'Prispevki',
+    tab_contributors: 'Dajalec',
 
     // Search controls
     search_placeholder: 'Išči po vseh poljih (npr. ime, kraj, datum)...',
     search_btn: 'Išči',
-    adv_type_births: 'Rojstva',
-    adv_type_families: 'Družine',
+    adv_type_births: 'Rojstvo',
+    adv_type_families: 'Družina',
 
     // Result section headings
-    results_births: 'Rojstva',
-    results_families: 'Družine',
+    results_births: 'Rojstvo',
+    results_families: 'Družina',
     results_title: 'Rezultati',
 
     // Status messages
@@ -83,9 +83,9 @@ const translations = {
     col_wife_surname: 'Priimek žene',
     col_date_of_marriage: 'Datum poroke',
     col_place_of_marriage: 'Kraj poroke',
-    col_contributor_ID: 'ID prispevka',
-    col_total_births: 'Skupaj rojstev',
-    col_total_families: 'Skupaj družin',
+    col_contributor_ID: 'Dajalec',
+    col_total_births: 'Rojstvo',
+    col_total_families: 'Družina',
     col_total: 'Skupaj',
     col_last_modified: 'Zadnja sprememba',
   },

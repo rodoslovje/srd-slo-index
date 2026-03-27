@@ -18,7 +18,7 @@ export async function renderContributors() {
         total_births: m.births_count,
         total_families: m.families_count,
         total: m.births_count + m.families_count,
-        last_modified: new Date(m.last_modified).toLocaleString(),
+        last_modified: new Date(m.last_modified).toLocaleDateString(),
       }));
     }
     renderTable(cachedData, 'table-contributors', contributorColumns, 'total', false);
