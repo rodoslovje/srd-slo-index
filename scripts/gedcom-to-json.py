@@ -138,7 +138,7 @@ def main():
 
     # Process each file found.
     for filename in gedcom_files:
-        contributor_id = os.path.splitext(filename)[0]
+        contributor_id = os.path.splitext(filename)[0].lower().capitalize()
         input_path = os.path.join(INPUT_DIR, filename)
         print(f"\nProcessing file: {filename} (Contributor: {contributor_id})")
 
