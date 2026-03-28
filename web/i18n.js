@@ -44,6 +44,13 @@ const translations = {
     col_total_families: 'Family',
     col_total: 'Total',
     col_last_modified: 'Last Change',
+
+    // Society name (used in intro logo)
+    society_name: 'Slovenian Genealogical Society',
+
+    // Footer
+    footer_version: 'Version',
+    footer_data_update: 'Data update',
   },
   sl: {
     // Site title
@@ -90,6 +97,13 @@ const translations = {
     col_total_families: 'Družina',
     col_total: 'Skupaj',
     col_last_modified: 'Zadnja sprememba',
+
+    // Society name (used in intro logo)
+    society_name: 'Slovensko rodoslovno društvo',
+
+    // Footer
+    footer_version: 'Različica',
+    footer_data_update: 'Posodobitev podatkov',
   },
 };
 

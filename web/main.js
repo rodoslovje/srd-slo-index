@@ -1,4 +1,5 @@
 import { t, initI18n, onLanguageChange, getIntro } from './i18n.js';
+import { BUILD_TIME, DATA_UPDATED } from './build-info.js';
 import { renderContributors, refreshContributorsIfVisible } from './contributors.js';
 import { setupGeneralSearch, setupBirthSearchForm, setupFamilySearchForm, restoreFromURL } from './search.js';
 import { updateURL } from './url.js';
@@ -48,6 +49,7 @@ export function renderIntros() {
   ).join('');
   const logo = `<a href="https://rodoslovje.si" target="_blank" rel="noopener" class="intro-logo-link">
     <img src="/srd-logo.png" alt="Slovensko rodoslovno društvo" class="intro-logo" />
+    <span class="intro-logo-name">${t('society_name')}</span>
   </a>`;
   const html = paragraphs + logo;
   ['intro-general', 'intro-birth', 'intro-family'].forEach(id => {
@@ -147,6 +149,11 @@ async function init() {
     setupBirthSearchForm();
     setupFamilySearchForm();
     renderIntros();
+
+    const buildEl = document.getElementById('build-time');
+    const dataEl = document.getElementById('data-updated');
+    if (buildEl) buildEl.textContent = BUILD_TIME.slice(0, 10);
+    if (dataEl) dataEl.textContent = DATA_UPDATED.slice(0, 10);
 
     if (window.innerWidth > 768) sidebar.classList.add('open');
 
