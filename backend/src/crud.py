@@ -25,27 +25,28 @@ def get_contributors(db: Session):
     ]
 
 
-def search_all(db: Session, query: str, skip: int = 0, limit: int = 100):
-    # Enable trigram extension for fuzzy search
-    db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
+def _text_filter(column, value, exact: bool):
+    search_term = f"%{value}%"
+    if exact:
+        return column.ilike(search_term)
+    return or_(column.op("%")(cast(value, Text)), column.ilike(search_term))
 
-    # Set similarity threshold
-    db.execute(text("SELECT set_limit(0.3);"))
-    db.commit()
+
+def search_all(db: Session, query: str, skip: int = 0, limit: int = 100, exact: bool = False):
+    if not exact:
+        db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
+        db.execute(text("SELECT set_limit(0.3);"))
+        db.commit()
 
     search_term = f"%{query}%"
-    query_text = cast(query, Text)
 
     births = (
         db.query(models.Birth)
         .filter(
             or_(
-                models.Birth.name.op("%")(query_text),
-                models.Birth.name.ilike(search_term),
-                models.Birth.surname.op("%")(query_text),
-                models.Birth.surname.ilike(search_term),
-                models.Birth.place_of_birth.op("%")(query_text),
-                models.Birth.place_of_birth.ilike(search_term),
+                _text_filter(models.Birth.name, query, exact),
+                _text_filter(models.Birth.surname, query, exact),
+                _text_filter(models.Birth.place_of_birth, query, exact),
                 models.Birth.date_of_birth.ilike(search_term),
             )
         )
@@ -58,16 +59,11 @@ def search_all(db: Session, query: str, skip: int = 0, limit: int = 100):
         db.query(models.Family)
         .filter(
             or_(
-                models.Family.husband_name.op("%")(query_text),
-                models.Family.husband_name.ilike(search_term),
-                models.Family.husband_surname.op("%")(query_text),
-                models.Family.husband_surname.ilike(search_term),
-                models.Family.wife_name.op("%")(query_text),
-                models.Family.wife_name.ilike(search_term),
-                models.Family.wife_surname.op("%")(query_text),
-                models.Family.wife_surname.ilike(search_term),
-                models.Family.place_of_marriage.op("%")(query_text),
-                models.Family.place_of_marriage.ilike(search_term),
+                _text_filter(models.Family.husband_name, query, exact),
+                _text_filter(models.Family.husband_surname, query, exact),
+                _text_filter(models.Family.wife_name, query, exact),
+                _text_filter(models.Family.wife_surname, query, exact),
+                _text_filter(models.Family.place_of_marriage, query, exact),
                 models.Family.date_of_marriage.ilike(search_term),
             )
         )
@@ -87,34 +83,21 @@ def search_advanced_births(
     place_of_birth: str = None,
     skip: int = 0,
     limit: int = 100,
+    exact: bool = False,
 ):
-    db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
-    db.execute(text("SELECT set_limit(0.3);"))
-    db.commit()
+    if not exact:
+        db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
+        db.execute(text("SELECT set_limit(0.3);"))
+        db.commit()
 
     query = db.query(models.Birth)
 
     if name:
-        query = query.filter(
-            or_(
-                models.Birth.name.op("%")(cast(name, Text)),
-                models.Birth.name.ilike(f"%{name}%"),
-            )
-        )
+        query = query.filter(_text_filter(models.Birth.name, name, exact))
     if surname:
-        query = query.filter(
-            or_(
-                models.Birth.surname.op("%")(cast(surname, Text)),
-                models.Birth.surname.ilike(f"%{surname}%"),
-            )
-        )
+        query = query.filter(_text_filter(models.Birth.surname, surname, exact))
     if place_of_birth:
-        query = query.filter(
-            or_(
-                models.Birth.place_of_birth.op("%")(cast(place_of_birth, Text)),
-                models.Birth.place_of_birth.ilike(f"%{place_of_birth}%"),
-            )
-        )
+        query = query.filter(_text_filter(models.Birth.place_of_birth, place_of_birth, exact))
     if date_of_birth:
         query = query.filter(models.Birth.date_of_birth.ilike(f"%{date_of_birth}%"))
 
@@ -131,51 +114,26 @@ def search_advanced_families(
     place_of_marriage: str = None,
     skip: int = 0,
     limit: int = 100,
+    exact: bool = False,
 ):
-    db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
-    db.execute(text("SELECT set_limit(0.3);"))
-    db.commit()
+    if not exact:
+        db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
+        db.execute(text("SELECT set_limit(0.3);"))
+        db.commit()
 
     query = db.query(models.Family)
 
     if husband_name:
-        query = query.filter(
-            or_(
-                models.Family.husband_name.op("%")(cast(husband_name, Text)),
-                models.Family.husband_name.ilike(f"%{husband_name}%"),
-            )
-        )
+        query = query.filter(_text_filter(models.Family.husband_name, husband_name, exact))
     if husband_surname:
-        query = query.filter(
-            or_(
-                models.Family.husband_surname.op("%")(cast(husband_surname, Text)),
-                models.Family.husband_surname.ilike(f"%{husband_surname}%"),
-            )
-        )
+        query = query.filter(_text_filter(models.Family.husband_surname, husband_surname, exact))
     if wife_name:
-        query = query.filter(
-            or_(
-                models.Family.wife_name.op("%")(cast(wife_name, Text)),
-                models.Family.wife_name.ilike(f"%{wife_name}%"),
-            )
-        )
+        query = query.filter(_text_filter(models.Family.wife_name, wife_name, exact))
     if wife_surname:
-        query = query.filter(
-            or_(
-                models.Family.wife_surname.op("%")(cast(wife_surname, Text)),
-                models.Family.wife_surname.ilike(f"%{wife_surname}%"),
-            )
-        )
+        query = query.filter(_text_filter(models.Family.wife_surname, wife_surname, exact))
     if place_of_marriage:
-        query = query.filter(
-            or_(
-                models.Family.place_of_marriage.op("%")(cast(place_of_marriage, Text)),
-                models.Family.place_of_marriage.ilike(f"%{place_of_marriage}%"),
-            )
-        )
+        query = query.filter(_text_filter(models.Family.place_of_marriage, place_of_marriage, exact))
     if date_of_marriage:
-        query = query.filter(
-            models.Family.date_of_marriage.ilike(f"%{date_of_marriage}%")
-        )
+        query = query.filter(models.Family.date_of_marriage.ilike(f"%{date_of_marriage}%"))
 
     return query.offset(skip).limit(limit).all()
