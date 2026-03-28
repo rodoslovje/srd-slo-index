@@ -1,6 +1,6 @@
 import { t, initI18n, onLanguageChange, getIntro } from './i18n.js';
 import { BUILD_TIME, DATA_UPDATED } from './build-info.js';
-import { renderContributors, refreshContributorsIfVisible, renderTotalsBar } from './contributors.js';
+import { renderContributors, refreshContributorsIfVisible, renderTotalsBar, prefetchContributors } from './contributors.js';
 import { setupGeneralSearch, setupBirthSearchForm, setupFamilySearchForm, restoreFromURL } from './search.js';
 import { updateURL } from './url.js';
 
@@ -150,6 +150,7 @@ async function init() {
     setupBirthSearchForm();
     setupFamilySearchForm();
     renderIntros();
+    prefetchContributors();
 
     const buildEl = document.getElementById('build-time');
     const dataEl = document.getElementById('data-updated');
