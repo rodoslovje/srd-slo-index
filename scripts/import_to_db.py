@@ -1,3 +1,4 @@
+import argparse
 import os
 import json
 from sqlalchemy import create_engine, text
@@ -18,15 +19,9 @@ engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
-def main():
-    """
-    Main function to import extracted JSON data into the database.
-    """
-    db = SessionLocal()
-    print("Connecting to the database...")
-
-    # Create extensions and tables
-    print("Setting up database tables and extensions...")
+def setup_full(db):
+    """Drop and recreate all tables (full mode)."""
+    print("Setting up database tables and extensions (full rebuild)...")
     db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
     db.execute(
         text(
@@ -54,6 +49,125 @@ def main():
     )
     db.commit()
 
+
+def setup_update(db):
+    """Create tables if they don't exist yet (update mode)."""
+    print("Setting up database tables and extensions (update mode)...")
+    db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
+    db.execute(
+        text(
+            """
+        CREATE TABLE IF NOT EXISTS contributors (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(255) UNIQUE NOT NULL,
+            last_modified VARCHAR(255)
+        );
+        CREATE TABLE IF NOT EXISTS births (
+            id SERIAL PRIMARY KEY, name TEXT, surname TEXT, date_of_birth TEXT, place_of_birth TEXT, contributor TEXT
+        );
+        CREATE TABLE IF NOT EXISTS families (
+            id SERIAL PRIMARY KEY, husband_name TEXT, husband_surname TEXT, wife_name TEXT, wife_surname TEXT, date_of_marriage TEXT, place_of_marriage TEXT, contributor TEXT
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_birth_name_trgm ON births USING gist (name gist_trgm_ops);
+        CREATE INDEX IF NOT EXISTS idx_birth_surname_trgm ON births USING gist (surname gist_trgm_ops);
+        CREATE INDEX IF NOT EXISTS idx_family_h_surname_trgm ON families USING gist (husband_surname gist_trgm_ops);
+        CREATE INDEX IF NOT EXISTS idx_family_w_surname_trgm ON families USING gist (wife_surname gist_trgm_ops);
+    """
+        )
+    )
+    db.commit()
+
+
+def get_db_last_modified(db, contributor_name):
+    """Returns the last_modified value stored in the contributors table, or None."""
+    row = db.execute(
+        text("SELECT last_modified FROM contributors WHERE name = :name"),
+        {"name": contributor_name},
+    ).fetchone()
+    return row[0] if row else None
+
+
+def import_contributor(db, contributor_id, last_modified):
+    """Delete existing records for contributor and reinsert from JSON files."""
+    births_file = os.path.join(DATA_DIR, f"{contributor_id}-births.json")
+    families_file = os.path.join(DATA_DIR, f"{contributor_id}-families.json")
+
+    # Remove stale records before reinserting
+    db.execute(text("DELETE FROM births WHERE contributor = :name"), {"name": contributor_id})
+    db.execute(text("DELETE FROM families WHERE contributor = :name"), {"name": contributor_id})
+
+    # Update contributor timestamp
+    db.execute(
+        text(
+            "INSERT INTO contributors (name, last_modified) VALUES (:name, :last_modified) "
+            "ON CONFLICT (name) DO UPDATE SET last_modified = :last_modified;"
+        ),
+        {"name": contributor_id, "last_modified": last_modified},
+    )
+
+    # Load Births
+    if os.path.exists(births_file):
+        with open(births_file, "r", encoding="utf-8") as f:
+            births_data = json.load(f)
+        print(f"  -> Inserting {len(births_data)} birth records...")
+        for birth in births_data:
+            birth["contributor"] = contributor_id
+            db.execute(
+                text(
+                    "INSERT INTO births (name, surname, date_of_birth, place_of_birth, contributor) "
+                    "VALUES (:name, :surname, :date_of_birth, :place_of_birth, :contributor)"
+                ),
+                birth,
+            )
+    else:
+        print(f"  -> WARNING: Could not find births file at {births_file}")
+
+    # Load Families
+    if os.path.exists(families_file):
+        with open(families_file, "r", encoding="utf-8") as f:
+            families_data = json.load(f)
+        print(f"  -> Inserting {len(families_data)} family records...")
+        for family in families_data:
+            family["contributor"] = contributor_id
+            db.execute(
+                text(
+                    "INSERT INTO families (husband_name, husband_surname, wife_name, wife_surname, "
+                    "date_of_marriage, place_of_marriage, contributor) "
+                    "VALUES (:husband_name, :husband_surname, :wife_name, :wife_surname, "
+                    ":date_of_marriage, :place_of_marriage, :contributor)"
+                ),
+                family,
+            )
+    else:
+        print(f"  -> WARNING: Could not find families file at {families_file}")
+
+    db.commit()
+
+
+def main():
+    """
+    Main function to import extracted JSON data into the database.
+    """
+    parser = argparse.ArgumentParser(description="Import JSON data into the database.")
+    parser.add_argument(
+        "--mode",
+        choices=["update", "full"],
+        default="update",
+        help="update (default): only reimport contributors whose data has changed; "
+             "full: drop and rebuild all tables from scratch.",
+    )
+    args = parser.parse_args()
+    full_mode = args.mode == "full"
+
+    db = SessionLocal()
+    print(f"Connecting to the database (mode: {args.mode})...")
+
+    if full_mode:
+        setup_full(db)
+    else:
+        setup_update(db)
+
     # --- Setup ---
     if not os.path.isdir(DATA_DIR):
         print(f"Error: Data directory '{DATA_DIR}' not found.")
@@ -73,53 +187,14 @@ def main():
         contributor_id = meta["contributor"]
         last_modified = meta.get("last_modified", "")
 
+        if not full_mode:
+            db_last_modified = get_db_last_modified(db, contributor_id)
+            if db_last_modified == last_modified:
+                print(f"\nSkipping contributor: {contributor_id} (up to date)")
+                continue
+
         print(f"\nProcessing contributor: {contributor_id}")
-
-        # Insert contributor metadata
-        db.execute(
-            text(
-                "INSERT INTO contributors (name, last_modified) VALUES (:name, :last_modified) ON CONFLICT (name) DO UPDATE SET last_modified = :last_modified;"
-            ),
-            {"name": contributor_id, "last_modified": last_modified},
-        )
-
-        # Load Births
-        births_file = os.path.join(DATA_DIR, f"{contributor_id}-births.json")
-        if os.path.exists(births_file):
-            with open(births_file, "r", encoding="utf-8") as f:
-                births_data = json.load(f)
-
-            print(f"  -> Inserting {len(births_data)} birth records...")
-            for birth in births_data:
-                birth["contributor"] = contributor_id
-                db.execute(
-                    text(
-                        "INSERT INTO births (name, surname, date_of_birth, place_of_birth, contributor) VALUES (:name, :surname, :date_of_birth, :place_of_birth, :contributor)"
-                    ),
-                    birth,
-                )
-        else:
-            print(f"  -> WARNING: Could not find births file at {births_file}")
-
-        # Load Families
-        families_file = os.path.join(DATA_DIR, f"{contributor_id}-families.json")
-        if os.path.exists(families_file):
-            with open(families_file, "r", encoding="utf-8") as f:
-                families_data = json.load(f)
-
-            print(f"  -> Inserting {len(families_data)} family records...")
-            for family in families_data:
-                family["contributor"] = contributor_id
-                db.execute(
-                    text(
-                        "INSERT INTO families (husband_name, husband_surname, wife_name, wife_surname, date_of_marriage, place_of_marriage, contributor) VALUES (:husband_name, :husband_surname, :wife_name, :wife_surname, :date_of_marriage, :place_of_marriage, :contributor)"
-                    ),
-                    family,
-                )
-        else:
-            print(f"  -> WARNING: Could not find families file at {families_file}")
-
-        db.commit()
+        import_contributor(db, contributor_id, last_modified)
 
     print("\nData import finished successfully.")
     db.close()
