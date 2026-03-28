@@ -26,17 +26,15 @@ def get_contributors(db: Session):
 
 
 def _text_filter(column, value, exact: bool):
-    search_term = f"%{value}%"
     if exact:
-        return column.ilike(search_term)
-    return or_(column.op("%")(cast(value, Text)), column.ilike(search_term))
+        return column.ilike(value)  # case-insensitive exact match, no wildcards
+    return or_(column.op("%")(cast(value, Text)), column.ilike(f"%{value}%"))
 
 
 def search_all(db: Session, query: str, skip: int = 0, limit: int = 100, exact: bool = False):
-    if not exact:
-        db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
-        db.execute(text("SELECT set_limit(0.3);"))
-        db.commit()
+    db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
+    db.execute(text(f"SELECT set_limit({0.3 if not exact else 1.0});"))
+    db.commit()
 
     search_term = f"%{query}%"
 
@@ -85,10 +83,9 @@ def search_advanced_births(
     limit: int = 100,
     exact: bool = False,
 ):
-    if not exact:
-        db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
-        db.execute(text("SELECT set_limit(0.3);"))
-        db.commit()
+    db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
+    db.execute(text(f"SELECT set_limit({0.3 if not exact else 1.0});"))
+    db.commit()
 
     query = db.query(models.Birth)
 
@@ -116,10 +113,9 @@ def search_advanced_families(
     limit: int = 100,
     exact: bool = False,
 ):
-    if not exact:
-        db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
-        db.execute(text("SELECT set_limit(0.3);"))
-        db.commit()
+    db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
+    db.execute(text(f"SELECT set_limit({0.3 if not exact else 1.0});"))
+    db.commit()
 
     query = db.query(models.Family)
 
