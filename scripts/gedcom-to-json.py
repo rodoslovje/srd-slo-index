@@ -1,5 +1,6 @@
-# scripts/extract_data.py
+# scripts/gedcom-to-json.py
 
+import argparse
 import os
 import json
 import re
@@ -110,7 +111,7 @@ def extract_year(date_str):
     """Returns the 4-digit year from a GEDCOM date string, or None if not found."""
     if not date_str:
         return None
-    match = re.search(r'\b(\d{4})\b', date_str)
+    match = re.search(r"\b(\d{4})\b", date_str)
     return int(match.group(1)) if match else None
 
 
@@ -120,12 +121,37 @@ def is_recent(date_str, cutoff_year):
     return year is not None and year > cutoff_year
 
 
+def needs_processing(input_path, births_path, families_path):
+    """
+    Returns True if the GED file should be processed in update mode:
+    either JSON output is missing or older than the GED file.
+    """
+    ged_mtime = os.path.getmtime(input_path)
+    for json_path in (births_path, families_path):
+        if not os.path.exists(json_path):
+            return True
+        if os.path.getmtime(json_path) < ged_mtime:
+            return True
+    return False
+
+
 def main():
     """
     Main function to process all GEDCOM files in the input directory,
     extracting birth and marriage data into separate JSON files.
     """
-    print("Starting GEDCOM data extraction process...")
+    parser = argparse.ArgumentParser(description="Convert GEDCOM files to JSON.")
+    parser.add_argument(
+        "--mode",
+        choices=["update", "full"],
+        default="update",
+        help="update (default): skip files whose JSON is already up to date; "
+        "full: process all files and overwrite existing JSON.",
+    )
+    args = parser.parse_args()
+    full_mode = args.mode == "full"
+
+    print(f"Starting GEDCOM data extraction process (mode: {args.mode})...")
 
     # --- Setup ---
     # Ensure the output directory exists, creating it if necessary.
@@ -152,8 +178,42 @@ def main():
 
     # Process each file found.
     for filename in gedcom_files:
-        contributor_id = os.path.splitext(filename)[0].lower().capitalize()
+        contributor_id = "-".join(
+            part.lower().capitalize()
+            for part in os.path.splitext(filename)[0].split("-")
+        )
         input_path = os.path.join(INPUT_DIR, filename)
+        births_output_path = os.path.join(OUTPUT_DIR, f"{contributor_id}-births.json")
+        families_output_path = os.path.join(
+            OUTPUT_DIR, f"{contributor_id}-families.json"
+        )
+
+        # --- Update mode: skip if JSON is already up to date ---
+        if not full_mode and not needs_processing(
+            input_path, births_output_path, families_output_path
+        ):
+            print(f"\nSkipping {filename} (JSON is up to date).")
+            # Still include in metadata using the existing JSON counts
+            try:
+                with open(births_output_path, encoding="utf-8") as f:
+                    births_count = len(json.load(f))
+                with open(families_output_path, encoding="utf-8") as f:
+                    families_count = len(json.load(f))
+                ged_mtime = datetime.fromtimestamp(
+                    os.path.getmtime(input_path)
+                ).isoformat()
+                metadata.append(
+                    {
+                        "contributor": contributor_id,
+                        "births_count": births_count,
+                        "families_count": families_count,
+                        "last_modified": ged_mtime,
+                    }
+                )
+            except Exception:
+                pass
+            continue
+
         print(f"\nProcessing file: {filename} (Contributor: {contributor_id})")
 
         # Initialize lists to hold extracted records for this file.
@@ -249,28 +309,34 @@ def main():
         cutoff_year = datetime.now().year - 100
         births_before = len(births_data)
         families_before = len(families_data)
-        births_data = [r for r in births_data if not is_recent(r["date_of_birth"], cutoff_year)]
-        families_data = [r for r in families_data if not is_recent(r["date_of_marriage"], cutoff_year)]
+        births_data = [
+            r for r in births_data if not is_recent(r["date_of_birth"], cutoff_year)
+        ]
+        families_data = [
+            r
+            for r in families_data
+            if not is_recent(r["date_of_marriage"], cutoff_year)
+        ]
         filtered_births = births_before - len(births_data)
         filtered_families = families_before - len(families_data)
         if filtered_births or filtered_families:
-            print(f"  Filtered {filtered_births} recent birth(s) and {filtered_families} recent family/families (after {cutoff_year}).")
+            print(
+                f"  Filtered {filtered_births} recent birth(s) and {filtered_families} recent family/families (after {cutoff_year})."
+            )
 
         # --- 4. Write Output JSON Files ---
-        # Write the extracted births data to its JSON file.
-        births_output_path = os.path.join(OUTPUT_DIR, f"{contributor_id}-births.json")
+        ged_mtime = os.path.getmtime(input_path)
+
         with open(births_output_path, "w", encoding="utf-8") as f:
             json.dump(births_data, f, ensure_ascii=False, indent=4)
+        os.utime(births_output_path, (ged_mtime, ged_mtime))
         print(
             f"  -> Successfully created '{births_output_path}' with {len(births_data)} birth records."
         )
 
-        # Write the extracted families data to its JSON file.
-        families_output_path = os.path.join(
-            OUTPUT_DIR, f"{contributor_id}-families.json"
-        )
         with open(families_output_path, "w", encoding="utf-8") as f:
             json.dump(families_data, f, ensure_ascii=False, indent=4)
+        os.utime(families_output_path, (ged_mtime, ged_mtime))
         print(
             f"  -> Successfully created '{families_output_path}' with {len(families_data)} family records."
         )
@@ -281,7 +347,7 @@ def main():
                 "contributor": contributor_id,
                 "births_count": len(births_data),
                 "families_count": len(families_data),
-                "last_modified": datetime.now().isoformat(),
+                "last_modified": datetime.fromtimestamp(ged_mtime).isoformat(),
             }
         )
 
