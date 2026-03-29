@@ -15,6 +15,42 @@ INPUT_DIR = "input"
 OUTPUT_DIR = "data"
 
 
+def _build_cp1252_to_cp1250_map():
+    """
+    Returns a translation table for characters that differ between cp1252 and cp1250.
+    Used to fix UTF-8 files that were incorrectly converted from cp1250 using cp1252/Latin-1
+    as the source encoding (a common mistake that turns č→è, Č→È, etc.).
+    """
+    mapping = {}
+    for byte_val in range(0x80, 0x100):
+        b = bytes([byte_val])
+        try:
+            cp1250_char = b.decode("cp1250")
+            cp1252_char = b.decode("cp1252")
+            if cp1250_char != cp1252_char:
+                mapping[cp1252_char] = cp1250_char
+        except (UnicodeDecodeError, ValueError):
+            pass
+    return str.maketrans(mapping)
+
+
+_CP1252_TO_CP1250 = _build_cp1252_to_cp1250_map()
+
+
+def fix_cp1252_as_cp1250(content):
+    """
+    Detects and fixes UTF-8 content that was incorrectly converted from cp1250
+    using cp1252 as the source encoding. Only applied when the content contains
+    cp1252-specific characters (like è/È) but lacks the expected cp1250 equivalents
+    (like č/Č), which is the telltale sign of the mis-conversion.
+    """
+    has_cp1252_chars = "è" in content or "È" in content
+    has_cp1250_chars = "č" in content or "Č" in content
+    if has_cp1252_chars and not has_cp1250_chars:
+        return content.translate(_CP1252_TO_CP1250)
+    return content
+
+
 def safe_read_gedcom(filepath):
     """
     Attempts to read a file using a sequence of common GEDCOM encodings.
@@ -226,6 +262,12 @@ def main():
         try:
             # Decode the file using our fallback encodings
             gedcom_content = safe_read_gedcom(input_path)
+
+            # Fix files that were incorrectly converted from cp1250 using cp1252/Latin-1
+            fixed = fix_cp1252_as_cp1250(gedcom_content)
+            if fixed is not gedcom_content:
+                print(f"  WARNING: cp1252→cp1250 encoding fix applied (è→č etc.) for {filename}")
+                gedcom_content = fixed
 
             # Update the CHAR tag to UTF-8 so the parser doesn't get confused
             # by a legacy encoding declaration in a file we just converted.
