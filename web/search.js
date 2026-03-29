@@ -28,6 +28,8 @@ async function performGeneralSearch() {
   updateURL({ q: query, ...(exact ? { ex: '1' } : {}) });
   hideIntro('intro-general');
   document.getElementById('general-results').style.display = 'block';
+  document.getElementById('count-general-births').textContent = '0';
+  document.getElementById('count-general-families').textContent = '0';
   document.getElementById('table-general-births').innerHTML = `<p>${t('searching')}</p>`;
   document.getElementById('table-general-families').innerHTML = `<p>${t('searching')}</p>`;
 
@@ -98,6 +100,7 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
     }
     updateURL(shortParams);
 
+    document.getElementById(countId).textContent = '0';
     document.getElementById(tableId).innerHTML = `<p>${t('searching')}</p>`;
     const apiParams = new URLSearchParams({ ...fieldParams, limit: '500', ...(exact ? { exact: 'true' } : {}) });
 
