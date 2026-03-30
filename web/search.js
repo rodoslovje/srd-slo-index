@@ -1,6 +1,6 @@
 import { t, onLanguageChange } from './i18n.js';
 import { renderTable } from './table.js';
-import { API_BASE_URL, birthColumns, familyColumns } from './config.js';
+import { API_BASE_URL, birthColumns, familyColumns, DATE_RANGE_COLUMNS } from './config.js';
 import { updateURL, PARAM_MAP } from './url.js';
 import { hideIntro } from './main.js';
 
@@ -64,10 +64,25 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
       const inputId = `${prefix}${col}`;
       const label = t(`col_${col}`);
       const val = document.getElementById(inputId)?.value || '';
-      html += `<div class="input-wrapper">
-                 <input type="text" id="${inputId}" placeholder="${label}" value="${val}" />
-                 <button type="button" class="clear-btn" style="display:${val ? 'block' : 'none'}">&times;</button>
-               </div>`;
+      if (DATE_RANGE_COLUMNS.has(col)) {
+        const toId = `${prefix}${col}_to`;
+        const toVal = document.getElementById(toId)?.value || '';
+        html += `<div class="date-range">
+                   <div class="input-wrapper">
+                     <input type="text" id="${inputId}" placeholder="${label}" value="${val}" />
+                     <button type="button" class="clear-btn" style="display:${val ? 'block' : 'none'}">&times;</button>
+                   </div>
+                   <div class="input-wrapper">
+                     <input type="text" id="${toId}" placeholder="${t('date_to')}" value="${toVal}" />
+                     <button type="button" class="clear-btn" style="display:${toVal ? 'block' : 'none'}">&times;</button>
+                   </div>
+                 </div>`;
+      } else {
+        html += `<div class="input-wrapper">
+                   <input type="text" id="${inputId}" placeholder="${label}" value="${val}" />
+                   <button type="button" class="clear-btn" style="display:${val ? 'block' : 'none'}">&times;</button>
+                 </div>`;
+      }
     });
     html += `<label class="exact-toggle">
                <input type="checkbox" id="${exactId}"${exactChecked ? ' checked' : ''} />
@@ -82,6 +97,10 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
     columns.forEach(c => {
       const val = document.getElementById(`${prefix}${c}`)?.value.trim();
       if (val) fieldParams[c] = val;
+      if (DATE_RANGE_COLUMNS.has(c)) {
+        const toVal = document.getElementById(`${prefix}${c}_to`)?.value.trim();
+        if (toVal) fieldParams[`${c}_to`] = toVal;
+      }
     });
 
     hideIntro(introId);
@@ -199,6 +218,19 @@ export function restoreFromURL() {
           const clearBtn = input.nextElementSibling;
           if (clearBtn?.matches('.clear-btn')) clearBtn.style.display = 'block';
           hasCriteria = true;
+        }
+      }
+      if (DATE_RANGE_COLUMNS.has(col)) {
+        const toKey = `${col}_to`;
+        const toVal = params.get(PARAM_MAP[toKey] || toKey);
+        if (toVal) {
+          const toInput = document.getElementById(`${prefix}${toKey}`);
+          if (toInput) {
+            toInput.value = toVal;
+            const clearBtn = toInput.nextElementSibling;
+            if (clearBtn?.matches('.clear-btn')) clearBtn.style.display = 'block';
+            hasCriteria = true;
+          }
         }
       }
     });

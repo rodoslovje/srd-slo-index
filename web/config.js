@@ -5,3 +5,6 @@ export const API_BASE_URL = cleanHost.startsWith('http') ? cleanHost : `https://
 
 export const birthColumns = ['name', 'surname', 'date_of_birth', 'place_of_birth', 'contributor'];
 export const familyColumns = ['husband_name', 'husband_surname', 'wife_name', 'wife_surname', 'date_of_marriage', 'place_of_marriage', 'contributor'];
+
+// Columns that get a paired "from / to" date range input in the search form
+export const DATE_RANGE_COLUMNS = new Set(['date_of_birth', 'date_of_marriage']);

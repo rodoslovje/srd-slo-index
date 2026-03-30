@@ -1,5 +1,6 @@
+import re
 from sqlalchemy.orm import Session
-from sqlalchemy import func, or_, text, cast, Text
+from sqlalchemy import func, or_, and_, text, cast, Text, Integer
 from . import models
 
 
@@ -23,6 +24,34 @@ def get_contributors(db: Session):
         }
         for c in db.query(models.Contributor).all()
     ]
+
+
+def _extract_year(val: str):
+    """Extract a 4-digit year from a date string like '15 MAR 1875' or '1875'."""
+    m = re.search(r"\d{4}", val)
+    return int(m.group()) if m else None
+
+
+def _date_filter(column, from_val: str = None, to_val: str = None, exact: bool = False):
+    """
+    If only from_val is given: existing fuzzy/exact string match.
+    If to_val is given: year-range comparison using the 4-digit year extracted
+    from the stored date string.
+    """
+    if to_val is not None:
+        # Year-range mode: extract year with PostgreSQL regex, cast to integer
+        year_expr = cast(func.substring(column, r"\d{4}"), Integer)
+        conditions = [column.op("~")(r"\d{4}")]  # only rows that have a year
+        from_year = _extract_year(from_val) if from_val else None
+        to_year = _extract_year(to_val)
+        if from_year:
+            conditions.append(year_expr >= from_year)
+        if to_year:
+            conditions.append(year_expr <= to_year)
+        return and_(*conditions)
+    if from_val:
+        return column.ilike(from_val if exact else f"%{from_val}%")
+    return None
 
 
 def _text_filter(column, value, exact: bool):
@@ -78,6 +107,7 @@ def search_advanced_births(
     name: str = None,
     surname: str = None,
     date_of_birth: str = None,
+    date_of_birth_to: str = None,
     place_of_birth: str = None,
     contributor: str = None,
     skip: int = 0,
@@ -96,8 +126,9 @@ def search_advanced_births(
         query = query.filter(_text_filter(models.Birth.surname, surname, exact))
     if place_of_birth:
         query = query.filter(_text_filter(models.Birth.place_of_birth, place_of_birth, exact))
-    if date_of_birth:
-        query = query.filter(models.Birth.date_of_birth.ilike(f"%{date_of_birth}%"))
+    date_cond = _date_filter(models.Birth.date_of_birth, date_of_birth, date_of_birth_to, exact)
+    if date_cond is not None:
+        query = query.filter(date_cond)
     if contributor:
         query = query.filter(_text_filter(models.Birth.contributor, contributor, exact))
 
@@ -111,6 +142,7 @@ def search_advanced_families(
     wife_name: str = None,
     wife_surname: str = None,
     date_of_marriage: str = None,
+    date_of_marriage_to: str = None,
     place_of_marriage: str = None,
     contributor: str = None,
     skip: int = 0,
@@ -133,8 +165,9 @@ def search_advanced_families(
         query = query.filter(_text_filter(models.Family.wife_surname, wife_surname, exact))
     if place_of_marriage:
         query = query.filter(_text_filter(models.Family.place_of_marriage, place_of_marriage, exact))
-    if date_of_marriage:
-        query = query.filter(models.Family.date_of_marriage.ilike(f"%{date_of_marriage}%"))
+    date_cond = _date_filter(models.Family.date_of_marriage, date_of_marriage, date_of_marriage_to, exact)
+    if date_cond is not None:
+        query = query.filter(date_cond)
     if contributor:
         query = query.filter(_text_filter(models.Family.contributor, contributor, exact))
 

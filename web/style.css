@@ -188,6 +188,22 @@ h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 
   margin-bottom: 10px;
 }
 
+/* Date range: "from" and "to" inputs side by side */
+.date-range {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.date-range .input-wrapper {
+  margin-bottom: 0;
+  flex: 1;
+}
+
+.date-range .input-wrapper:last-child {
+  flex: 0 0 38%;
+}
+
 .input-wrapper input {
   width: 100%;
   padding-right: 30px; /* Make space for the button */
