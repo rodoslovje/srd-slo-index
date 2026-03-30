@@ -22,7 +22,7 @@ import unicodedata
 from datetime import datetime, timezone
 
 INPUT_DIR = "input"
-CSV_PATH = os.path.join(INPUT_DIR, "imported-contributors.csv")
+CSV_PATH = os.path.join(INPUT_DIR, "orig/imported-contributors.csv")
 
 
 def normalize(s):
@@ -56,8 +56,9 @@ def main():
 
     dates = load_dates(CSV_PATH)
 
-    ged_files = glob.glob(os.path.join(INPUT_DIR, "*.GED")) + \
-                glob.glob(os.path.join(INPUT_DIR, "*.ged"))
+    ged_files = glob.glob(os.path.join(INPUT_DIR, "*.GED")) + glob.glob(
+        os.path.join(INPUT_DIR, "*.ged")
+    )
 
     if not ged_files:
         print(f"No .GED/.ged files found in '{INPUT_DIR}'.")
