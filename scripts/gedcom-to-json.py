@@ -130,18 +130,105 @@ def get_name_surname(individual):
     return "", ""
 
 
-def get_event_data(element, event_tag):
-    """Helper to extract date and place for a specific event like BIRT or MARR."""
+MATRICULA_RE = re.compile(r"https://data\.matricula-online\.eu/[^\"\s<]+")
+
+
+def _find_matricula_url(text):
+    """Return the first matricula-online.eu URL found in text, or empty string."""
+    if not text:
+        return ""
+    m = MATRICULA_RE.search(text)
+    return m.group().rstrip(".,;)") if m else ""
+
+
+def _link_from_subelement(element, sources_dict):
+    """
+    Extract a matricula URL from a GEDCOM sub-element using all known patterns:
+      P1  NOTE value (plain) or NOTE+CONT children (HTML-wrapped)
+      P2  NOTE with plain URL — same tag path as P1
+      P3  SOUR > PAGE
+      P4  SOUR > DATA > TEXT
+      P5  SOUR @ref@ resolved via sources_dict
+    """
+    tag = element.get_tag()
+    val = element.get_value() or ""
+
+    if tag == "NOTE":
+        # P2: plain URL directly as NOTE value
+        url = _find_matricula_url(val)
+        if url:
+            return url
+        # P1: URL buried in CONT/CONC continuation lines (may be HTML-wrapped)
+        full = val
+        for cont in element.get_child_elements():
+            if cont.get_tag() in ("CONT", "CONC"):
+                full += " " + (cont.get_value() or "")
+        return _find_matricula_url(full)
+
+    if tag == "SOUR":
+        # P5: reference pointer @Sxxx@ — look up pre-built sources_dict
+        if val.startswith("@") and val.endswith("@"):
+            return sources_dict.get(val, "")
+        # P3: inline SOUR > PAGE
+        for sour_child in element.get_child_elements():
+            if sour_child.get_tag() == "PAGE":
+                url = _find_matricula_url(sour_child.get_value() or "")
+                if url:
+                    return url
+            # P4: inline SOUR > DATA > TEXT
+            elif sour_child.get_tag() == "DATA":
+                for data_child in sour_child.get_child_elements():
+                    if data_child.get_tag() == "TEXT":
+                        url = _find_matricula_url(data_child.get_value() or "")
+                        if url:
+                            return url
+
+    return ""
+
+
+def build_sources_dict(root_elements):
+    """
+    Pre-build a mapping of source pointer → matricula URL from all root SOUR records.
+    Covers Pattern 5 (SOUR TITL / ABBR used by MAUKO.GED, MODRIJAN.GED, etc.).
+    """
+    sources = {}
+    for element in root_elements:
+        if element.get_tag() != "SOUR":
+            continue
+        pointer = element.get_pointer()
+        if not pointer:
+            continue
+        for child in element.get_child_elements():
+            if child.get_tag() in ("TITL", "ABBR"):
+                url = _find_matricula_url(child.get_value() or "")
+                if url:
+                    sources[pointer] = url
+                    break
+    return sources
+
+
+def get_event_data(element, event_tag, sources_dict=None):
+    """
+    Extract date, place, and an optional matricula-online link for an event (BIRT/MARR).
+    sources_dict must be pre-built with build_sources_dict() for SOUR @ref@ resolution.
+    """
+    if sources_dict is None:
+        sources_dict = {}
     for child in element.get_child_elements():
-        if child.get_tag() == event_tag:
-            date, place = "", ""
-            for subchild in child.get_child_elements():
-                if subchild.get_tag() == "DATE":
-                    date = subchild.get_value()
-                elif subchild.get_tag() == "PLAC":
-                    place = subchild.get_value()
-            return date, place
-    return "", ""
+        if child.get_tag() != event_tag:
+            continue
+        date, place, link = "", "", ""
+        # P6: URL stored directly as the event tag value (RENKO.GED pattern)
+        link = _find_matricula_url(child.get_value() or "")
+        for subchild in child.get_child_elements():
+            if subchild.get_tag() == "DATE":
+                date = subchild.get_value()
+            elif subchild.get_tag() == "PLAC":
+                place = subchild.get_value()
+            elif not link:
+                link = _link_from_subelement(subchild, sources_dict)
+        return date, place, link
+    return "", "", ""
 
 
 def extract_year(date_str):
@@ -297,35 +384,39 @@ def main():
         individuals_dict = {}
         family_elements = []
 
+        root_elements = list(gedcom_parser.get_root_child_elements())
+        sources_dict = build_sources_dict(root_elements)
+
         # First pass: Get all elements directly from the parser
-        for element in gedcom_parser.get_root_child_elements():
+        for element in root_elements:
             tag = element.get_tag()
 
             # --- 1. Extract Birth Information ---
             if tag == "INDI":
                 pointer = element.get_pointer()
                 name, surname = get_name_surname(element)
-                birth_date, birth_place = get_event_data(element, "BIRT")
+                birth_date, birth_place, birth_link = get_event_data(element, "BIRT", sources_dict)
 
                 # Store for marriage cross-referencing (include birth_date for privacy filter)
                 individuals_dict[pointer] = {"name": name, "surname": surname, "birth_date": birth_date}
 
                 if birth_date or birth_place:
-                    births_data.append(
-                        {
-                            "name": name,
-                            "surname": surname,
-                            "date_of_birth": birth_date or "",
-                            "place_of_birth": birth_place or "",
-                        }
-                    )
+                    record = {
+                        "name": name,
+                        "surname": surname,
+                        "date_of_birth": birth_date or "",
+                        "place_of_birth": birth_place or "",
+                    }
+                    if birth_link:
+                        record["link"] = birth_link
+                    births_data.append(record)
 
             elif tag == "FAM":
                 family_elements.append(element)
 
         # --- 2. Extract Family (Marriage) Information ---
         for family in family_elements:
-            marr_date, marr_place = get_event_data(family, "MARR")
+            marr_date, marr_place, marr_link = get_event_data(family, "MARR", sources_dict)
 
             husb_pointer, wife_pointer = "", ""
             for child in family.get_child_elements():
@@ -337,18 +428,19 @@ def main():
             husb = individuals_dict.get(husb_pointer, {})
             wife = individuals_dict.get(wife_pointer, {})
 
-            families_data.append(
-                {
-                    "husband_name": husb.get("name", ""),
-                    "husband_surname": husb.get("surname", ""),
-                    "wife_name": wife.get("name", ""),
-                    "wife_surname": wife.get("surname", ""),
-                    "date_of_marriage": marr_date or "",
-                    "place_of_marriage": marr_place or "",
-                    "_husb_birth": husb.get("birth_date", ""),
-                    "_wife_birth": wife.get("birth_date", ""),
-                }
-            )
+            record = {
+                "husband_name": husb.get("name", ""),
+                "husband_surname": husb.get("surname", ""),
+                "wife_name": wife.get("name", ""),
+                "wife_surname": wife.get("surname", ""),
+                "date_of_marriage": marr_date or "",
+                "place_of_marriage": marr_place or "",
+                "_husb_birth": husb.get("birth_date", ""),
+                "_wife_birth": wife.get("birth_date", ""),
+            }
+            if marr_link:
+                record["link"] = marr_link
+            families_data.append(record)
 
         # --- 3. Filter recent records (privacy: exclude last 100 years) ---
         cutoff_year = datetime.now().year - 100
