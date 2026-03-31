@@ -81,13 +81,24 @@ def setup_update(db):
     db.commit()
 
 
-def get_db_last_modified(db, contributor_name):
-    """Returns the last_modified value stored in the contributors table, or None."""
+def get_db_state(db, contributor_name):
+    """Returns (last_modified, links_count) stored in contributors table, or (None, 0)."""
     row = db.execute(
         text("SELECT last_modified FROM contributors WHERE name = :name"),
         {"name": contributor_name},
     ).fetchone()
-    return row[0] if row else None
+    if not row:
+        return None, 0
+    lm = row[0]
+    birth_links = db.execute(
+        text("SELECT COUNT(*) FROM births WHERE contributor = :name AND link IS NOT NULL AND link != ''"),
+        {"name": contributor_name},
+    ).scalar()
+    family_links = db.execute(
+        text("SELECT COUNT(*) FROM families WHERE contributor = :name AND link IS NOT NULL AND link != ''"),
+        {"name": contributor_name},
+    ).scalar()
+    return lm, (birth_links or 0) + (family_links or 0)
 
 
 def import_contributor(db, contributor_id, last_modified):
@@ -192,8 +203,9 @@ def main():
         last_modified = meta.get("last_modified", "")
 
         if not full_mode:
-            db_last_modified = get_db_last_modified(db, contributor_id)
-            if db_last_modified == last_modified:
+            db_last_modified, db_links_count = get_db_state(db, contributor_id)
+            meta_links_count = meta.get("links_count", 0)
+            if db_last_modified == last_modified and db_links_count == meta_links_count:
                 print(f"\nSkipping contributor: {contributor_id} (up to date)")
                 continue
 

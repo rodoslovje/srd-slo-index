@@ -402,17 +402,18 @@ def main():
             # Still include in metadata using the existing JSON counts
             try:
                 with open(births_output_path, encoding="utf-8") as f:
-                    births_count = len(json.load(f))
+                    births_data_skip = json.load(f)
                 with open(families_output_path, encoding="utf-8") as f:
-                    families_count = len(json.load(f))
+                    families_data_skip = json.load(f)
                 ged_mtime = datetime.fromtimestamp(
                     os.path.getmtime(input_path)
                 ).isoformat()
                 metadata.append(
                     {
                         "contributor": contributor_id,
-                        "births_count": births_count,
-                        "families_count": families_count,
+                        "births_count": len(births_data_skip),
+                        "families_count": len(families_data_skip),
+                        "links_count": sum(1 for r in births_data_skip if r.get("link")) + sum(1 for r in families_data_skip if r.get("link")),
                         "last_modified": ged_mtime,
                     }
                 )
@@ -574,11 +575,13 @@ def main():
         )
 
         # Add to metadata
+        links_count = sum(1 for r in births_data if r.get("link")) + sum(1 for r in families_data if r.get("link"))
         metadata.append(
             {
                 "contributor": contributor_id,
                 "births_count": len(births_data),
                 "families_count": len(families_data),
+                "links_count": links_count,
                 "last_modified": datetime.fromtimestamp(ged_mtime).isoformat(),
             }
         )
