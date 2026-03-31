@@ -492,8 +492,8 @@ def main():
                 if not death_link:
                     death_link = _indi_level_link(element, sources_dict)
 
-                # Store for marriage cross-referencing (include birth_date for privacy filter)
-                individuals_dict[pointer] = {"name": name, "surname": surname, "birth_date": birth_date}
+                # Store for marriage cross-referencing (include birth_date and death_date for privacy filter)
+                individuals_dict[pointer] = {"name": name, "surname": surname, "birth_date": birth_date, "death_date": death_date}
 
                 if birth_date or birth_place:
                     record = {
@@ -501,6 +501,7 @@ def main():
                         "surname": surname,
                         "date_of_birth": birth_date or "",
                         "place_of_birth": birth_place or "",
+                        "_death_date": death_date or "",
                     }
                     if birth_link:
                         record["link"] = birth_link
@@ -546,40 +547,59 @@ def main():
                 "place_of_marriage": marr_place or "",
                 "_husb_birth": husb.get("birth_date", ""),
                 "_wife_birth": wife.get("birth_date", ""),
+                "_husb_death": husb.get("death_date", ""),
+                "_wife_death": wife.get("death_date", ""),
             }
             if marr_link:
                 record["link"] = marr_link
             families_data.append(record)
 
-        # --- 3. Filter recent records (privacy: exclude last 100 years) ---
-        cutoff_year = datetime.now().year - 100
+        # --- 3. Filter recent records (privacy) ---
+        # Births/families: exclude if within last 100 years, unless the person died 20+ years ago.
+        # Deaths: exclude if within last 20 years.
+        birth_cutoff = datetime.now().year - 100
+        death_cutoff = datetime.now().year - 20
+
+        def died_long_ago(date_str):
+            """Returns True if date_str contains a year at or before death_cutoff."""
+            year = extract_year(date_str)
+            return year is not None and year <= death_cutoff
+
         births_before = len(births_data)
         families_before = len(families_data)
         deaths_before = len(deaths_data)
+
         births_data = [
-            r for r in births_data if not is_recent(r["date_of_birth"], cutoff_year)
+            r for r in births_data
+            if not is_recent(r["date_of_birth"], birth_cutoff)
+            or died_long_ago(r.get("_death_date", ""))
         ]
         families_data = [
-            r
-            for r in families_data
-            if not is_recent(r["date_of_marriage"], cutoff_year)
-            and not is_recent(r.get("_husb_birth", ""), cutoff_year)
-            and not is_recent(r.get("_wife_birth", ""), cutoff_year)
+            r for r in families_data
+            if (
+                not is_recent(r["date_of_marriage"], birth_cutoff)
+                and not is_recent(r.get("_husb_birth", ""), birth_cutoff)
+                and not is_recent(r.get("_wife_birth", ""), birth_cutoff)
+            ) or died_long_ago(r.get("_husb_death", "")) or died_long_ago(r.get("_wife_death", ""))
         ]
         deaths_data = [
-            r for r in deaths_data if not is_recent(r["date_of_death"], cutoff_year)
+            r for r in deaths_data if not is_recent(r["date_of_death"], death_cutoff)
         ]
         # Strip internal fields before writing
+        for r in births_data:
+            r.pop("_death_date", None)
         for r in families_data:
             r.pop("_husb_birth", None)
             r.pop("_wife_birth", None)
+            r.pop("_husb_death", None)
+            r.pop("_wife_death", None)
         filtered_births = births_before - len(births_data)
         filtered_families = families_before - len(families_data)
         filtered_deaths = deaths_before - len(deaths_data)
         if filtered_births or filtered_families or filtered_deaths:
             print(
                 f"  Filtered {filtered_births} recent birth(s), {filtered_families} recent family/families, "
-                f"{filtered_deaths} recent death(s) (after {cutoff_year})."
+                f"{filtered_deaths} recent death(s)."
             )
 
         # --- 4. Write Output JSON Files ---
