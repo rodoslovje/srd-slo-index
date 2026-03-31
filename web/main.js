@@ -1,10 +1,10 @@
 import { t, initI18n, onLanguageChange, getIntro } from './i18n.js';
 import { BUILD_TIME, DATA_UPDATED } from './build-info.js';
 import { renderContributors, refreshContributorsIfVisible, renderTotalsBar, prefetchContributors } from './contributors.js';
-import { setupGeneralSearch, setupBirthSearchForm, setupFamilySearchForm, restoreFromURL } from './search.js';
+import { setupGeneralSearch, setupBirthSearchForm, setupFamilySearchForm, setupDeathSearchForm, restoreFromURL } from './search.js';
 import { updateURL } from './url.js';
 
-const SEARCH_TABS = ['tab-general', 'tab-birth', 'tab-family'];
+const SEARCH_TABS = ['tab-general', 'tab-birth', 'tab-family', 'tab-death'];
 
 // --- Clearable inputs ---
 
@@ -52,7 +52,7 @@ export function renderIntros() {
     <span class="intro-logo-name">${t('society_name')}</span>
   </a>`;
   const html = paragraphs + logo;
-  ['intro-general', 'intro-birth', 'intro-family'].forEach(id => {
+  ['intro-general', 'intro-birth', 'intro-family', 'intro-death'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.innerHTML = html;
   });
@@ -64,7 +64,7 @@ export function hideIntro(id) {
 }
 
 export function showIntros() {
-  ['intro-general', 'intro-birth', 'intro-family'].forEach(id => {
+  ['intro-general', 'intro-birth', 'intro-family', 'intro-death'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = '';
   });
@@ -104,6 +104,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     document.getElementById('general-results').style.display = 'none';
     document.getElementById('birth-results').style.display = 'none';
     document.getElementById('family-results').style.display = 'none';
+    document.getElementById('death-results').style.display = 'none';
     showIntros();
 
     // On desktop: open sidebar for search tabs, close for contributors
@@ -124,6 +125,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
       'tab-general': 'general-search-sidebar',
       'tab-birth':   'birth-search-sidebar',
       'tab-family':  'family-search-sidebar',
+      'tab-death':   'death-search-sidebar',
     };
     const sidebarSection = sidebarSectionMap[targetTab];
     if (sidebarSection) document.getElementById(sidebarSection).classList.add('active');
@@ -149,6 +151,7 @@ async function init() {
     setupGeneralSearch();
     setupBirthSearchForm();
     setupFamilySearchForm();
+    setupDeathSearchForm();
     renderIntros();
     prefetchContributors();
 
@@ -166,6 +169,7 @@ async function init() {
     if (urlT === 'contributors') urlTab = 'contributors';
     else if (urlT === 'birth') urlTab = 'birth';
     else if (urlT === 'family') urlTab = 'family';
+    else if (urlT === 'death') urlTab = 'death';
     document.querySelector(`.tab-btn[data-target="tab-${urlTab}"]`)?.click();
 
     restoreFromURL();

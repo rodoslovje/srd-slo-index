@@ -16,6 +16,9 @@ export const PARAM_MAP = {
   contributor:          'c',
   date_of_birth_to:     'dobt',
   date_of_marriage_to:  'domt',
+  date_of_death:        'dod',
+  date_of_death_to:     'dodt',
+  place_of_death:       'pod',
 };
 
 export const PARAM_MAP_REVERSE = Object.fromEntries(

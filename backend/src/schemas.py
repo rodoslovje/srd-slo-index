@@ -36,6 +36,22 @@ class Family(FamilyBase):
         from_attributes = True
 
 
+class DeathBase(BaseModel):
+    name: str
+    surname: str
+    date_of_death: str
+    place_of_death: str
+    contributor: str
+    link: Optional[str] = None
+
+
+class Death(DeathBase):
+    id: int
+
+    class Config:
+        from_attributes = True
+
+
 class Contributor(BaseModel):
     name: str
     last_modified: str

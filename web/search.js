@@ -1,11 +1,11 @@
 import { t, onLanguageChange } from './i18n.js';
 import { renderTable } from './table.js';
-import { API_BASE_URL, birthColumns, familyColumns, DATE_RANGE_COLUMNS, DISPLAY_ONLY_COLUMNS } from './config.js';
+import { API_BASE_URL, birthColumns, familyColumns, deathColumns, DATE_RANGE_COLUMNS, DISPLAY_ONLY_COLUMNS } from './config.js';
 import { updateURL, PARAM_MAP } from './url.js';
 import { hideIntro } from './main.js';
 
 let lastGeneralResults = null;
-const lastAdvResults = { birth: null, family: null };
+const lastAdvResults = { birth: null, family: null, death: null };
 
 // --- General search ---
 
@@ -193,6 +193,21 @@ export function setupFamilySearchForm() {
   });
 }
 
+export function setupDeathSearchForm() {
+  setupSearchForm({
+    controlsId: 'death-search-controls',
+    columns: deathColumns,
+    endpoint: 'deaths',
+    resultsId: 'death-results',
+    countId: 'count-death-results',
+    tableId: 'table-death-results',
+    introId: 'intro-death',
+    defaultSort: 'surname',
+    defaultSecondarySort: 'name',
+    urlType: 'death',
+  });
+}
+
 export function restoreFromURL() {
   const params = new URLSearchParams(window.location.search);
   const q = params.get('q');
@@ -205,8 +220,8 @@ export function restoreFromURL() {
       if (cb) cb.checked = true;
     }
     document.getElementById('btn-general-search').click();
-  } else if (tParam === 'birth' || tParam === 'family') {
-    const columns = tParam === 'birth' ? birthColumns : familyColumns;
+  } else if (tParam === 'birth' || tParam === 'family' || tParam === 'death') {
+    const columns = tParam === 'birth' ? birthColumns : tParam === 'family' ? familyColumns : deathColumns;
     const prefix = `adv-${tParam}-`;
     let hasCriteria = false;
     columns.forEach(col => {

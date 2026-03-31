@@ -28,6 +28,18 @@ class Family(Base):
     link = Column(Text)
 
 
+class Death(Base):
+    __tablename__ = "deaths"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(Text, index=True)
+    surname = Column(Text, index=True)
+    date_of_death = Column(Text)
+    place_of_death = Column(Text)
+    contributor = Column(Text, index=True)
+    link = Column(Text)
+
+
 class Contributor(Base):
     __tablename__ = "contributors"
 

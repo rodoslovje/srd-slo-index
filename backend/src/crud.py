@@ -185,3 +185,36 @@ def search_advanced_families(
         query = query.filter(_text_filter(models.Family.contributor, contributor, exact))
 
     return query.offset(skip).limit(limit).all()
+
+
+def search_advanced_deaths(
+    db: Session,
+    name: str = None,
+    surname: str = None,
+    date_of_death: str = None,
+    date_of_death_to: str = None,
+    place_of_death: str = None,
+    contributor: str = None,
+    skip: int = 0,
+    limit: int = 100,
+    exact: bool = False,
+):
+    db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
+    db.execute(text(f"SELECT set_limit({0.3 if not exact else 1.0});"))
+    db.commit()
+
+    query = db.query(models.Death)
+
+    if name:
+        query = query.filter(_text_filter(models.Death.name, name, exact))
+    if surname:
+        query = query.filter(_text_filter(models.Death.surname, surname, exact))
+    if place_of_death:
+        query = query.filter(_text_filter(models.Death.place_of_death, place_of_death, exact))
+    date_cond = _date_filter(models.Death.date_of_death, date_of_death, date_of_death_to, exact)
+    if date_cond is not None:
+        query = query.filter(date_cond)
+    if contributor:
+        query = query.filter(_text_filter(models.Death.contributor, contributor, exact))
+
+    return query.offset(skip).limit(limit).all()

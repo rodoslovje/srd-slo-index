@@ -39,6 +39,9 @@ def setup_full(db):
         CREATE TABLE families (
             id SERIAL PRIMARY KEY, husband_name TEXT, husband_surname TEXT, wife_name TEXT, wife_surname TEXT, date_of_marriage TEXT, place_of_marriage TEXT, contributor TEXT, link TEXT
         );
+        CREATE TABLE deaths (
+            id SERIAL PRIMARY KEY, name TEXT, surname TEXT, date_of_death TEXT, place_of_death TEXT, contributor TEXT, link TEXT
+        );
 
         CREATE INDEX idx_birth_name_trgm ON births USING gist (name gist_trgm_ops);
         CREATE INDEX idx_birth_surname_trgm ON births USING gist (surname gist_trgm_ops);
@@ -67,6 +70,9 @@ def setup_update(db):
         );
         CREATE TABLE IF NOT EXISTS families (
             id SERIAL PRIMARY KEY, husband_name TEXT, husband_surname TEXT, wife_name TEXT, wife_surname TEXT, date_of_marriage TEXT, place_of_marriage TEXT, contributor TEXT, link TEXT
+        );
+        CREATE TABLE IF NOT EXISTS deaths (
+            id SERIAL PRIMARY KEY, name TEXT, surname TEXT, date_of_death TEXT, place_of_death TEXT, contributor TEXT, link TEXT
         );
         ALTER TABLE births ADD COLUMN IF NOT EXISTS link TEXT;
         ALTER TABLE families ADD COLUMN IF NOT EXISTS link TEXT;
@@ -109,6 +115,7 @@ def import_contributor(db, contributor_id, last_modified):
     # Remove stale records before reinserting
     db.execute(text("DELETE FROM births WHERE contributor = :name"), {"name": contributor_id})
     db.execute(text("DELETE FROM families WHERE contributor = :name"), {"name": contributor_id})
+    db.execute(text("DELETE FROM deaths WHERE contributor = :name"), {"name": contributor_id})
 
     # Update contributor timestamp
     db.execute(
@@ -156,6 +163,23 @@ def import_contributor(db, contributor_id, last_modified):
             )
     else:
         print(f"  -> WARNING: Could not find families file at {families_file}")
+
+    # Load Deaths
+    deaths_file = os.path.join(DATA_DIR, f"{contributor_id}-deaths.json")
+    if os.path.exists(deaths_file):
+        with open(deaths_file, "r", encoding="utf-8") as f:
+            deaths_data = json.load(f)
+        print(f"  -> Inserting {len(deaths_data)} death records...")
+        for death in deaths_data:
+            death["contributor"] = contributor_id
+            death.setdefault("link", None)
+            db.execute(
+                text(
+                    "INSERT INTO deaths (name, surname, date_of_death, place_of_death, contributor, link) "
+                    "VALUES (:name, :surname, :date_of_death, :place_of_death, :contributor, :link)"
+                ),
+                death,
+            )
 
     db.commit()
 
@@ -207,6 +231,7 @@ def main():
                 print(f"\nRemoving stale contributor: {name}")
                 db.execute(text("DELETE FROM births WHERE contributor = :name"), {"name": name})
                 db.execute(text("DELETE FROM families WHERE contributor = :name"), {"name": name})
+                db.execute(text("DELETE FROM deaths WHERE contributor = :name"), {"name": name})
                 db.execute(text("DELETE FROM contributors WHERE name = :name"), {"name": name})
         db.commit()
 

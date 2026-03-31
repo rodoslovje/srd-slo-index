@@ -34,7 +34,7 @@ const CENTERED_COLUMNS = new Set([
 ]);
 
 const RIGHT_COLUMNS = new Set([
-  'date_of_birth', 'date_of_marriage',
+  'date_of_birth', 'date_of_marriage', 'date_of_death',
 ]);
 
 function getValue(row, col) {

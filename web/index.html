@@ -21,6 +21,7 @@
             <button class="tab-btn active" data-target="tab-general" data-i18n="tab_search">Search</button>
             <button class="tab-btn" data-target="tab-birth" data-i18n="tab_birth">Birth</button>
             <button class="tab-btn" data-target="tab-family" data-i18n="tab_family">Family</button>
+            <button class="tab-btn" data-target="tab-death" data-i18n="tab_death">Death</button>
             <button class="tab-btn" data-target="tab-contributors" data-i18n="tab_contributors">Contributors</button>
           </div>
           <div class="lang-switcher" id="lang-switcher">
@@ -72,6 +73,14 @@
             </div>
           </section>
 
+          <section id="tab-death" class="tab-content">
+            <div id="intro-death" class="intro-text"></div>
+            <div id="death-results" class="results-container" style="display: none;">
+              <h2><span data-i18n="results_deaths">Death</span> (<span id="count-death-results">0</span>)</h2>
+              <div class="table-responsive" id="table-death-results"></div>
+            </div>
+          </section>
+
           <section id="tab-contributors" class="tab-content">
             <div id="totals-bar" class="totals-bar" style="display:none;">
               <span><span data-i18n="tab_contributors">Contributors</span>: <strong id="total-contributors">…</strong></span>
@@ -90,6 +99,7 @@
             <button class="tab-btn active" data-target="tab-general" data-i18n="tab_search">Search</button>
             <button class="tab-btn" data-target="tab-birth" data-i18n="tab_birth">Birth</button>
             <button class="tab-btn" data-target="tab-family" data-i18n="tab_family">Family</button>
+            <button class="tab-btn" data-target="tab-death" data-i18n="tab_death">Death</button>
             <button class="tab-btn" data-target="tab-contributors" data-i18n="tab_contributors">Contributors</button>
           </div>
 
@@ -113,6 +123,12 @@
 
           <div id="family-search-sidebar" class="sidebar-section">
             <div class="search-box" id="family-search-controls">
+              <!-- Controls injected by JS -->
+            </div>
+          </div>
+
+          <div id="death-search-sidebar" class="sidebar-section">
+            <div class="search-box" id="death-search-controls">
               <!-- Controls injected by JS -->
             </div>
           </div>

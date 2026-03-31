@@ -7,6 +7,7 @@ const translations = {
     tab_search: 'Search',
     tab_birth: 'Birth',
     tab_family: 'Family',
+    tab_death: 'Death',
     tab_contributors: 'Contributors',
 
     // Search controls
@@ -18,6 +19,7 @@ const translations = {
     // Result section headings
     results_births: 'Birth',
     results_families: 'Family',
+    results_deaths: 'Death',
 
     // Status messages
     loading: 'Loading genealogical data...',
@@ -35,6 +37,8 @@ const translations = {
     col_date_of_birth: 'Date of Birth',
     col_place_of_birth: 'Place of Birth',
     col_contributor: 'Contributor',
+    col_date_of_death: 'Date of Death',
+    col_place_of_death: 'Place of Death',
     col_husband_name: 'Husband Name',
     col_husband_surname: 'Husband Surname',
     col_wife_name: 'Wife Name',
@@ -65,6 +69,7 @@ const translations = {
     tab_search: 'Iskanje',
     tab_birth: 'Rojstvo',
     tab_family: 'Družina',
+    tab_death: 'Smrt',
     tab_contributors: 'Dajalci',
 
     // Search controls
@@ -76,6 +81,7 @@ const translations = {
     // Result section headings
     results_births: 'Rojstvo',
     results_families: 'Družina',
+    results_deaths: 'Smrt',
 
     // Status messages
     loading: 'Nalaganje genealoških podatkov...',
@@ -93,6 +99,8 @@ const translations = {
     col_date_of_birth: 'Datum rojstva',
     col_place_of_birth: 'Kraj rojstva',
     col_contributor: 'Dajalec',
+    col_date_of_death: 'Datum smrti',
+    col_place_of_death: 'Kraj smrti',
     col_husband_name: 'Ime moža',
     col_husband_surname: 'Priimek moža',
     col_wife_name: 'Ime žene',

@@ -92,3 +92,21 @@ def search_advanced_families(
         limit=limit,
         exact=exact,
     )
+
+
+@app.get("/api/search/advanced/deaths", response_model=List[schemas.Death])
+def search_advanced_deaths(
+    name: Optional[str] = None,
+    surname: Optional[str] = None,
+    date_of_death: Optional[str] = None,
+    date_of_death_to: Optional[str] = None,
+    place_of_death: Optional[str] = None,
+    contributor: Optional[str] = None,
+    limit: int = 500,
+    exact: bool = False,
+    db: Session = Depends(get_db),
+):
+    return crud.search_advanced_deaths(
+        db, name, surname, date_of_death, date_of_death_to=date_of_death_to,
+        place_of_death=place_of_death, contributor=contributor, limit=limit, exact=exact
+    )

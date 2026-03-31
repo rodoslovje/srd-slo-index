@@ -390,14 +390,13 @@ def main():
         ))
         input_path = os.path.join(INPUT_DIR, filename)
         births_output_path = os.path.join(OUTPUT_DIR, f"{contributor_id}-births.json")
-        families_output_path = os.path.join(
-            OUTPUT_DIR, f"{contributor_id}-families.json"
-        )
+        families_output_path = os.path.join(OUTPUT_DIR, f"{contributor_id}-families.json")
+        deaths_output_path = os.path.join(OUTPUT_DIR, f"{contributor_id}-deaths.json")
 
         # --- Update mode: skip if JSON is already up to date ---
         if not full_mode and not needs_processing(
             input_path, births_output_path, families_output_path
-        ):
+        ) and not needs_processing(input_path, deaths_output_path, deaths_output_path):
             print(f"\nSkipping {filename} (JSON is up to date).")
             # Still include in metadata using the existing JSON counts
             try:
@@ -405,6 +404,10 @@ def main():
                     births_data_skip = json.load(f)
                 with open(families_output_path, encoding="utf-8") as f:
                     families_data_skip = json.load(f)
+                deaths_data_skip = []
+                if os.path.exists(deaths_output_path):
+                    with open(deaths_output_path, encoding="utf-8") as f:
+                        deaths_data_skip = json.load(f)
                 ged_mtime = datetime.fromtimestamp(
                     os.path.getmtime(input_path)
                 ).isoformat()
@@ -413,7 +416,8 @@ def main():
                         "contributor": contributor_id,
                         "births_count": len(births_data_skip),
                         "families_count": len(families_data_skip),
-                        "links_count": sum(1 for r in births_data_skip if r.get("link")) + sum(1 for r in families_data_skip if r.get("link")),
+                        "deaths_count": len(deaths_data_skip),
+                        "links_count": sum(1 for r in births_data_skip if r.get("link")) + sum(1 for r in families_data_skip if r.get("link")) + sum(1 for r in deaths_data_skip if r.get("link")),
                         "last_modified": ged_mtime,
                     }
                 )
@@ -462,10 +466,11 @@ def main():
                 os.remove(temp_path)
             continue  # Move to the next file
 
-        # --- 1. Extract Birth Information ---
+        # --- 1. Extract Birth and Death Information ---
         # Dictionary to cache individual names by their GEDCOM pointer (ID)
         individuals_dict = {}
         family_elements = []
+        deaths_data = []
 
         root_elements = list(gedcom_parser.get_root_child_elements())
         obje_dict = build_obje_dict(root_elements)
@@ -480,9 +485,12 @@ def main():
                 pointer = element.get_pointer()
                 name, surname = get_name_surname(element)
                 birth_date, birth_place, birth_link = get_event_data(element, "BIRT", sources_dict)
+                death_date, death_place, death_link = get_event_data(element, "DEAT", sources_dict)
                 # Fallback: link at INDI level (e.g. KOŠIR.GED stores NOTE on INDI, not inside BIRT)
                 if not birth_link:
                     birth_link = _indi_level_link(element, sources_dict)
+                if not death_link:
+                    death_link = _indi_level_link(element, sources_dict)
 
                 # Store for marriage cross-referencing (include birth_date for privacy filter)
                 individuals_dict[pointer] = {"name": name, "surname": surname, "birth_date": birth_date}
@@ -497,6 +505,17 @@ def main():
                     if birth_link:
                         record["link"] = birth_link
                     births_data.append(record)
+
+                if death_date or death_place:
+                    record = {
+                        "name": name,
+                        "surname": surname,
+                        "date_of_death": death_date or "",
+                        "place_of_death": death_place or "",
+                    }
+                    if death_link:
+                        record["link"] = death_link
+                    deaths_data.append(record)
 
             elif tag == "FAM":
                 family_elements.append(element)
@@ -536,6 +555,7 @@ def main():
         cutoff_year = datetime.now().year - 100
         births_before = len(births_data)
         families_before = len(families_data)
+        deaths_before = len(deaths_data)
         births_data = [
             r for r in births_data if not is_recent(r["date_of_birth"], cutoff_year)
         ]
@@ -546,15 +566,20 @@ def main():
             and not is_recent(r.get("_husb_birth", ""), cutoff_year)
             and not is_recent(r.get("_wife_birth", ""), cutoff_year)
         ]
+        deaths_data = [
+            r for r in deaths_data if not is_recent(r["date_of_death"], cutoff_year)
+        ]
         # Strip internal fields before writing
         for r in families_data:
             r.pop("_husb_birth", None)
             r.pop("_wife_birth", None)
         filtered_births = births_before - len(births_data)
         filtered_families = families_before - len(families_data)
-        if filtered_births or filtered_families:
+        filtered_deaths = deaths_before - len(deaths_data)
+        if filtered_births or filtered_families or filtered_deaths:
             print(
-                f"  Filtered {filtered_births} recent birth(s) and {filtered_families} recent family/families (after {cutoff_year})."
+                f"  Filtered {filtered_births} recent birth(s), {filtered_families} recent family/families, "
+                f"{filtered_deaths} recent death(s) (after {cutoff_year})."
             )
 
         # --- 4. Write Output JSON Files ---
@@ -574,13 +599,25 @@ def main():
             f"  -> Successfully created '{families_output_path}' with {len(families_data)} family records."
         )
 
+        with open(deaths_output_path, "w", encoding="utf-8") as f:
+            json.dump(deaths_data, f, ensure_ascii=False, indent=4)
+        os.utime(deaths_output_path, (ged_mtime, ged_mtime))
+        print(
+            f"  -> Successfully created '{deaths_output_path}' with {len(deaths_data)} death records."
+        )
+
         # Add to metadata
-        links_count = sum(1 for r in births_data if r.get("link")) + sum(1 for r in families_data if r.get("link"))
+        links_count = (
+            sum(1 for r in births_data if r.get("link"))
+            + sum(1 for r in families_data if r.get("link"))
+            + sum(1 for r in deaths_data if r.get("link"))
+        )
         metadata.append(
             {
                 "contributor": contributor_id,
                 "births_count": len(births_data),
                 "families_count": len(families_data),
+                "deaths_count": len(deaths_data),
                 "links_count": links_count,
                 "last_modified": datetime.fromtimestamp(ged_mtime).isoformat(),
             }
