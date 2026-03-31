@@ -11,6 +11,7 @@ class Birth(Base):
     date_of_birth = Column(Text)
     place_of_birth = Column(Text)
     contributor = Column(Text, index=True)
+    link = Column(Text)
 
 
 class Family(Base):
@@ -24,6 +25,7 @@ class Family(Base):
     date_of_marriage = Column(Text)
     place_of_marriage = Column(Text)
     contributor = Column(Text, index=True)
+    link = Column(Text)
 
 
 class Contributor(Base):

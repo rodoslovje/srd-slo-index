@@ -1,3 +1,4 @@
+from typing import Optional
 from pydantic import BaseModel
 
 
@@ -7,6 +8,7 @@ class BirthBase(BaseModel):
     date_of_birth: str
     place_of_birth: str
     contributor: str
+    link: Optional[str] = None
 
 
 class Birth(BirthBase):
@@ -24,6 +26,7 @@ class FamilyBase(BaseModel):
     date_of_marriage: str
     place_of_marriage: str
     contributor: str
+    link: Optional[str] = None
 
 
 class Family(FamilyBase):
@@ -38,3 +41,4 @@ class Contributor(BaseModel):
     last_modified: str
     births_count: int
     families_count: int
+    links_count: int

@@ -34,10 +34,10 @@ def setup_full(db):
             last_modified VARCHAR(255)
         );
         CREATE TABLE births (
-            id SERIAL PRIMARY KEY, name TEXT, surname TEXT, date_of_birth TEXT, place_of_birth TEXT, contributor TEXT
+            id SERIAL PRIMARY KEY, name TEXT, surname TEXT, date_of_birth TEXT, place_of_birth TEXT, contributor TEXT, link TEXT
         );
         CREATE TABLE families (
-            id SERIAL PRIMARY KEY, husband_name TEXT, husband_surname TEXT, wife_name TEXT, wife_surname TEXT, date_of_marriage TEXT, place_of_marriage TEXT, contributor TEXT
+            id SERIAL PRIMARY KEY, husband_name TEXT, husband_surname TEXT, wife_name TEXT, wife_surname TEXT, date_of_marriage TEXT, place_of_marriage TEXT, contributor TEXT, link TEXT
         );
 
         CREATE INDEX idx_birth_name_trgm ON births USING gist (name gist_trgm_ops);
@@ -63,11 +63,13 @@ def setup_update(db):
             last_modified VARCHAR(255)
         );
         CREATE TABLE IF NOT EXISTS births (
-            id SERIAL PRIMARY KEY, name TEXT, surname TEXT, date_of_birth TEXT, place_of_birth TEXT, contributor TEXT
+            id SERIAL PRIMARY KEY, name TEXT, surname TEXT, date_of_birth TEXT, place_of_birth TEXT, contributor TEXT, link TEXT
         );
         CREATE TABLE IF NOT EXISTS families (
-            id SERIAL PRIMARY KEY, husband_name TEXT, husband_surname TEXT, wife_name TEXT, wife_surname TEXT, date_of_marriage TEXT, place_of_marriage TEXT, contributor TEXT
+            id SERIAL PRIMARY KEY, husband_name TEXT, husband_surname TEXT, wife_name TEXT, wife_surname TEXT, date_of_marriage TEXT, place_of_marriage TEXT, contributor TEXT, link TEXT
         );
+        ALTER TABLE births ADD COLUMN IF NOT EXISTS link TEXT;
+        ALTER TABLE families ADD COLUMN IF NOT EXISTS link TEXT;
 
         CREATE INDEX IF NOT EXISTS idx_birth_name_trgm ON births USING gist (name gist_trgm_ops);
         CREATE INDEX IF NOT EXISTS idx_birth_surname_trgm ON births USING gist (surname gist_trgm_ops);
@@ -113,10 +115,11 @@ def import_contributor(db, contributor_id, last_modified):
         print(f"  -> Inserting {len(births_data)} birth records...")
         for birth in births_data:
             birth["contributor"] = contributor_id
+            birth.setdefault("link", None)
             db.execute(
                 text(
-                    "INSERT INTO births (name, surname, date_of_birth, place_of_birth, contributor) "
-                    "VALUES (:name, :surname, :date_of_birth, :place_of_birth, :contributor)"
+                    "INSERT INTO births (name, surname, date_of_birth, place_of_birth, contributor, link) "
+                    "VALUES (:name, :surname, :date_of_birth, :place_of_birth, :contributor, :link)"
                 ),
                 birth,
             )
@@ -130,12 +133,13 @@ def import_contributor(db, contributor_id, last_modified):
         print(f"  -> Inserting {len(families_data)} family records...")
         for family in families_data:
             family["contributor"] = contributor_id
+            family.setdefault("link", None)
             db.execute(
                 text(
                     "INSERT INTO families (husband_name, husband_surname, wife_name, wife_surname, "
-                    "date_of_marriage, place_of_marriage, contributor) "
+                    "date_of_marriage, place_of_marriage, contributor, link) "
                     "VALUES (:husband_name, :husband_surname, :wife_name, :wife_surname, "
-                    ":date_of_marriage, :place_of_marriage, :contributor)"
+                    ":date_of_marriage, :place_of_marriage, :contributor, :link)"
                 ),
                 family,
             )

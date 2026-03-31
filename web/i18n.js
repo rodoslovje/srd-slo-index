@@ -47,6 +47,8 @@ const translations = {
     col_total: 'Total',
     col_last_modified: 'Last Change',
     col_last_update: 'Last update',
+    col_link: 'Link',
+    col_total_links: 'Links',
 
     // Society name (used in intro logo)
     society_name: 'Slovenian Genealogical Society',
@@ -103,6 +105,8 @@ const translations = {
     col_total: 'Skupaj',
     col_last_modified: 'Zadnja sprememba',
     col_last_update: 'Zadnja posodobitev',
+    col_link: 'Povezava',
+    col_total_links: 'Povezave',
 
     // Society name (used in intro logo)
     society_name: 'Slovensko rodoslovno društvo',

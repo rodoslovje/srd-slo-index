@@ -1,6 +1,6 @@
 import { t, onLanguageChange } from './i18n.js';
 import { renderTable } from './table.js';
-import { API_BASE_URL, birthColumns, familyColumns, DATE_RANGE_COLUMNS } from './config.js';
+import { API_BASE_URL, birthColumns, familyColumns, DATE_RANGE_COLUMNS, DISPLAY_ONLY_COLUMNS } from './config.js';
 import { updateURL, PARAM_MAP } from './url.js';
 import { hideIntro } from './main.js';
 
@@ -60,7 +60,7 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
   function renderFields() {
     const exactChecked = document.getElementById(exactId)?.checked || false;
     let html = '';
-    columns.forEach(col => {
+    columns.filter(col => !DISPLAY_ONLY_COLUMNS.has(col)).forEach(col => {
       const inputId = `${prefix}${col}`;
       const label = t(`col_${col}`);
       const val = document.getElementById(inputId)?.value || '';
@@ -94,7 +94,7 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
 
   async function performSearch() {
     const fieldParams = {};
-    columns.forEach(c => {
+    columns.filter(c => !DISPLAY_ONLY_COLUMNS.has(c)).forEach(c => {
       const val = document.getElementById(`${prefix}${c}`)?.value.trim();
       if (val) fieldParams[c] = val;
       if (DATE_RANGE_COLUMNS.has(c)) {

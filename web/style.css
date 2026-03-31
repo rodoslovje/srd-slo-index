@@ -450,6 +450,19 @@ h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 
   color: var(--primary);
 }
 
+.link-cell {
+  text-align: center;
+  font-size: 1rem;
+}
+
+.link-cell a {
+  text-decoration: none;
+}
+
+.link-cell a:hover {
+  opacity: 0.7;
+}
+
 @media (max-width: 480px) {
   .totals-bar {
     display: grid;
@@ -458,10 +471,7 @@ h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 
     padding: 8px 0 10px;
     font-size: 0.88rem;
   }
-  /* Last update spans full width since it's the longest label */
-  .totals-bar span:last-child {
-    grid-column: 1 / -1;
-  }
+  /* 6 items fit neatly in 3 rows of 2 — no spanning needed */
 }
 
 /* --- Footer --- */

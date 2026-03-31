@@ -15,12 +15,25 @@ def get_contributors(db: Session):
         .group_by(models.Family.contributor)
         .all()
     )
+    birth_links = dict(
+        db.query(models.Birth.contributor, func.count(models.Birth.id))
+        .filter(models.Birth.link.isnot(None), models.Birth.link != "")
+        .group_by(models.Birth.contributor)
+        .all()
+    )
+    family_links = dict(
+        db.query(models.Family.contributor, func.count(models.Family.id))
+        .filter(models.Family.link.isnot(None), models.Family.link != "")
+        .group_by(models.Family.contributor)
+        .all()
+    )
     return [
         {
             "name": c.name,
             "last_modified": c.last_modified,
             "births_count": births_counts.get(c.name, 0),
             "families_count": families_counts.get(c.name, 0),
+            "links_count": birth_links.get(c.name, 0) + family_links.get(c.name, 0),
         }
         for c in db.query(models.Contributor).all()
     ]

@@ -72,17 +72,29 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
 
   let html = '<table><thead><tr>';
   columns.forEach(col => {
-    const header = t(`col_${col}`);
-    let indicator = '';
-    if (primary?.column === col) indicator = primary.ascending ? ' ▲' : ' ▼';
-    else if (secondary?.column === col) indicator = secondary.ascending ? ' △' : ' ▽';
-    html += `<th data-col="${col}" class="sortable">${header}${indicator}</th>`;
+    if (col === 'link') {
+      html += `<th>${t('col_link')}</th>`;
+    } else {
+      const header = t(`col_${col}`);
+      let indicator = '';
+      if (primary?.column === col) indicator = primary.ascending ? ' ▲' : ' ▼';
+      else if (secondary?.column === col) indicator = secondary.ascending ? ' △' : ' ▽';
+      html += `<th data-col="${col}" class="sortable">${header}${indicator}</th>`;
+    }
   });
   html += '</tr></thead><tbody>';
 
   data.forEach(row => {
     html += '<tr>';
-    columns.forEach(col => html += `<td>${row[col] || ''}</td>`);
+    columns.forEach(col => {
+      if (col === 'link') {
+        html += row.link
+          ? `<td class="link-cell"><a href="${row.link}" target="_blank" rel="noopener" title="${row.link}">🔗</a></td>`
+          : '<td></td>';
+      } else {
+        html += `<td>${row[col] || ''}</td>`;
+      }
+    });
     html += '</tr>';
   });
   html += '</tbody></table>';
