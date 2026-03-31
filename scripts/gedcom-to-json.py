@@ -130,7 +130,7 @@ def get_name_surname(individual):
     return "", ""
 
 
-MATRICULA_RE = re.compile(r"https://data\.matricula-online\.eu/[^\"\s<]+")
+MATRICULA_RE = re.compile(r"https?://data\.matricula-online\.eu/[^\"\s<]+")
 
 
 def _find_matricula_url(text):
@@ -170,10 +170,11 @@ def _link_from_subelement(element, sources_dict):
         if url:
             return url
         # P1: URL buried in CONT/CONC continuation lines (may be HTML-wrapped)
+        # CONC = concatenate directly (no separator), CONT = new line (space separator)
         full = val
         for cont in element.get_child_elements():
-            if cont.get_tag() in ("CONT", "CONC"):
-                full += " " + (cont.get_value() or "")
+            sep = "" if cont.get_tag() == "CONC" else " "
+            full += sep + (cont.get_value() or "")
         return _find_matricula_url(full)
 
     if tag == "SOUR":
