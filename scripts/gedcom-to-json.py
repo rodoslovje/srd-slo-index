@@ -141,6 +141,16 @@ def _find_matricula_url(text):
     return m.group().rstrip(".,;)") if m else ""
 
 
+_PAGE_RE = re.compile(r"\?pg=\d+")
+
+
+def _apply_page(url_template, page):
+    """Replace or append the ?pg= parameter in a matricula URL."""
+    if _PAGE_RE.search(url_template):
+        return _PAGE_RE.sub(f"?pg={page}", url_template)
+    return url_template
+
+
 def _link_from_subelement(element, sources_dict):
     """
     Extract a matricula URL from a GEDCOM sub-element using all known patterns:
@@ -148,7 +158,8 @@ def _link_from_subelement(element, sources_dict):
       P2  NOTE with plain URL — same tag path as P1
       P3  SOUR > PAGE
       P4  SOUR > DATA > TEXT
-      P5  SOUR @ref@ resolved via sources_dict
+      P5  SOUR @ref@ resolved via sources_dict (plain URL)
+      P7  SOUR @ref@ + PAGE N resolved via FILN/OBJE template in sources_dict
     """
     tag = element.get_tag()
     val = element.get_value() or ""
@@ -166,9 +177,21 @@ def _link_from_subelement(element, sources_dict):
         return _find_matricula_url(full)
 
     if tag == "SOUR":
-        # P5: reference pointer @Sxxx@ — look up pre-built sources_dict
+        # P5/P7: reference pointer @Sxxx@
         if val.startswith("@") and val.endswith("@"):
-            return sources_dict.get(val, "")
+            template = sources_dict.get(val, "")
+            if not template:
+                return ""
+            # P7: if a PAGE child exists, substitute the page number into the template URL
+            for sour_child in element.get_child_elements():
+                if sour_child.get_tag() == "PAGE":
+                    page_val = (sour_child.get_value() or "").strip()
+                    # page_val may be a plain number or contain text like "254" or "pg. 254"
+                    m = re.search(r"\d+", page_val)
+                    if m and _PAGE_RE.search(template):
+                        return _apply_page(template, m.group())
+            # P5: plain URL stored directly in sources_dict (no page substitution needed)
+            return template
         # P3: inline SOUR > PAGE
         for sour_child in element.get_child_elements():
             if sour_child.get_tag() == "PAGE":
@@ -186,11 +209,51 @@ def _link_from_subelement(element, sources_dict):
     return ""
 
 
-def build_sources_dict(root_elements):
+def _indi_level_link(element, sources_dict):
     """
-    Pre-build a mapping of source pointer → matricula URL from all root SOUR records.
-    Covers Pattern 5 (SOUR TITL / ABBR used by MAUKO.GED, MODRIJAN.GED, etc.).
+    Extract a matricula URL from any NOTE or SOUR at the INDI (or FAM) level.
+    Used when the researcher stored the link on the individual/family record
+    rather than inside the specific BIRT/MARR event (e.g. KOŠIR.GED pattern).
     """
+    for child in element.get_child_elements():
+        if child.get_tag() in ("NOTE", "SOUR"):
+            url = _link_from_subelement(child, sources_dict)
+            if url:
+                return url
+    return ""
+
+
+def build_obje_dict(root_elements):
+    """
+    Pre-build a mapping of OBJE pointer → matricula URL from all root OBJE records.
+    Used to resolve FILN-based sources in RENKO.GED (and similar files).
+    """
+    obje = {}
+    for element in root_elements:
+        if element.get_tag() != "OBJE":
+            continue
+        pointer = element.get_pointer()
+        if not pointer:
+            continue
+        for child in element.get_child_elements():
+            if child.get_tag() == "FILE":
+                url = _find_matricula_url(child.get_value() or "")
+                if url:
+                    obje[pointer] = url
+                    break
+    return obje
+
+
+def build_sources_dict(root_elements, obje_dict=None):
+    """
+    Pre-build a mapping of source pointer → matricula URL (or URL template) from
+    all root SOUR records. Two patterns covered:
+      P5  SOUR with TITL/ABBR containing a direct URL (MAUKO.GED, MODRIJAN.GED)
+      P7  SOUR with FILN + OBJE children: store first OBJE URL as template for
+          page substitution (RENKO.GED pattern — caller substitutes ?pg=N)
+    """
+    if obje_dict is None:
+        obje_dict = {}
     sources = {}
     for element in root_elements:
         if element.get_tag() != "SOUR":
@@ -198,12 +261,26 @@ def build_sources_dict(root_elements):
         pointer = element.get_pointer()
         if not pointer:
             continue
+        # P5: direct URL in TITL or ABBR
         for child in element.get_child_elements():
             if child.get_tag() in ("TITL", "ABBR"):
                 url = _find_matricula_url(child.get_value() or "")
                 if url:
                     sources[pointer] = url
                     break
+        if pointer in sources:
+            continue
+        # P7: FILN-based source — find first OBJE child with a matricula URL to use
+        #     as a page-substitution template (e.g. .../04105/?pg=1 → .../04105/?pg=254)
+        has_filn = any(c.get_tag() == "FILN" for c in element.get_child_elements())
+        if has_filn:
+            for child in element.get_child_elements():
+                if child.get_tag() == "OBJE":
+                    obje_ptr = child.get_value() or ""
+                    template = obje_dict.get(obje_ptr, "")
+                    if template and _PAGE_RE.search(template):
+                        sources[pointer] = template  # stored as template; caller substitutes page
+                        break
     return sources
 
 
@@ -385,7 +462,8 @@ def main():
         family_elements = []
 
         root_elements = list(gedcom_parser.get_root_child_elements())
-        sources_dict = build_sources_dict(root_elements)
+        obje_dict = build_obje_dict(root_elements)
+        sources_dict = build_sources_dict(root_elements, obje_dict)
 
         # First pass: Get all elements directly from the parser
         for element in root_elements:
@@ -396,6 +474,9 @@ def main():
                 pointer = element.get_pointer()
                 name, surname = get_name_surname(element)
                 birth_date, birth_place, birth_link = get_event_data(element, "BIRT", sources_dict)
+                # Fallback: link at INDI level (e.g. KOŠIR.GED stores NOTE on INDI, not inside BIRT)
+                if not birth_link:
+                    birth_link = _indi_level_link(element, sources_dict)
 
                 # Store for marriage cross-referencing (include birth_date for privacy filter)
                 individuals_dict[pointer] = {"name": name, "surname": surname, "birth_date": birth_date}
@@ -417,6 +498,9 @@ def main():
         # --- 2. Extract Family (Marriage) Information ---
         for family in family_elements:
             marr_date, marr_place, marr_link = get_event_data(family, "MARR", sources_dict)
+            # Fallback: link at FAM level (e.g. KOŠIR.GED stores NOTE on FAM, not inside MARR)
+            if not marr_link:
+                marr_link = _indi_level_link(family, sources_dict)
 
             husb_pointer, wife_pointer = "", ""
             for child in family.get_child_elements():
