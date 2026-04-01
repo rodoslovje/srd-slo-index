@@ -1,6 +1,7 @@
 import argparse
 import os
 import json
+import unicodedata
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 from dotenv import load_dotenv
@@ -128,10 +129,28 @@ def get_db_state(db, contributor_name):
     )
 
 
+def find_data_file(directory, filename):
+    """
+    Find a file in the directory, falling back to case-insensitive and
+    Unicode normalization-insensitive matching if the exact path isn't found.
+    """
+    exact_path = os.path.join(directory, filename)
+    if os.path.exists(exact_path):
+        return exact_path
+
+    if os.path.isdir(directory):
+        target = unicodedata.normalize("NFC", filename).lower()
+        for f in os.listdir(directory):
+            if unicodedata.normalize("NFC", f).lower() == target:
+                return os.path.join(directory, f)
+
+    return exact_path
+
+
 def import_contributor(db, contributor_id, last_modified):
     """Delete existing records for contributor and reinsert from JSON files."""
-    births_file = os.path.join(DATA_DIR, f"{contributor_id}-births.json")
-    families_file = os.path.join(DATA_DIR, f"{contributor_id}-families.json")
+    births_file = find_data_file(DATA_DIR, f"{contributor_id}-births.json")
+    families_file = find_data_file(DATA_DIR, f"{contributor_id}-families.json")
 
     # Remove stale records before reinserting
     db.execute(
@@ -193,7 +212,7 @@ def import_contributor(db, contributor_id, last_modified):
         print(f"  -> WARNING: Could not find families file at {families_file}")
 
     # Load Deaths
-    deaths_file = os.path.join(DATA_DIR, f"{contributor_id}-deaths.json")
+    deaths_file = find_data_file(DATA_DIR, f"{contributor_id}-deaths.json")
     if os.path.exists(deaths_file):
         with open(deaths_file, "r", encoding="utf-8") as f:
             deaths_data = json.load(f)
