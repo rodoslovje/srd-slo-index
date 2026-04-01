@@ -69,6 +69,9 @@ def _date_filter(column, from_val: str = None, to_val: str = None, exact: bool =
             conditions.append(year_expr <= to_year)
         return and_(*conditions)
     if from_val:
+        if exact:
+            safe_value = re.sub(r"([.*+?^${}()|\[\]\\])", r"\\\1", from_val)
+            return column.op("~*")(rf"\y{safe_value}\y")
         return column.ilike(f"%{from_val}%")
     return None
 
@@ -77,7 +80,7 @@ def _text_filter(column, value, exact: bool):
     if exact:
         safe_value = re.sub(r"([.*+?^${}()|\[\]\\])", r"\\\1", value)
         return column.op("~*")(
-            f"\\y{safe_value}\\y"
+            rf"\y{safe_value}\y"
         )  # case-insensitive word boundary match
     return or_(column.op("%")(cast(value, Text)), column.ilike(f"%{value}%"))
 
@@ -89,8 +92,6 @@ def search_all(
     db.execute(text(f"SELECT set_limit({0.3 if not exact else 1.0});"))
     db.commit()
 
-    search_term = f"%{query}%"
-
     births = (
         db.query(models.Birth)
         .filter(
@@ -98,7 +99,7 @@ def search_all(
                 _text_filter(models.Birth.name, query, exact),
                 _text_filter(models.Birth.surname, query, exact),
                 _text_filter(models.Birth.place_of_birth, query, exact),
-                models.Birth.date_of_birth.ilike(search_term),
+                _text_filter(models.Birth.date_of_birth, query, exact),
             )
         )
         .offset(skip)
@@ -116,7 +117,7 @@ def search_all(
                 _text_filter(models.Family.wife_surname, query, exact),
                 _text_filter(models.Family.children, query, exact),
                 _text_filter(models.Family.place_of_marriage, query, exact),
-                models.Family.date_of_marriage.ilike(search_term),
+                _text_filter(models.Family.date_of_marriage, query, exact),
             )
         )
         .offset(skip)
