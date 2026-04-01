@@ -522,6 +522,8 @@ def main():
                 family_elements.append(element)
 
         # --- 2. Extract Family (Marriage) Information ---
+        birth_cutoff = datetime.now().year - 100
+        death_cutoff = datetime.now().year - 20
         for family in family_elements:
             marr_date, marr_place, marr_link = get_event_data(family, "MARR", sources_dict)
             # Fallback: link at FAM level (e.g. KOŠIR.GED stores NOTE on FAM, not inside MARR)
@@ -529,14 +531,32 @@ def main():
                 marr_link = _indi_level_link(family, sources_dict)
 
             husb_pointer, wife_pointer = "", ""
+            child_pointers = []
             for child in family.get_child_elements():
                 if child.get_tag() == "HUSB":
                     husb_pointer = child.get_value()
                 elif child.get_tag() == "WIFE":
                     wife_pointer = child.get_value()
+                elif child.get_tag() == "CHIL":
+                    child_pointers.append(child.get_value())
 
             husb = individuals_dict.get(husb_pointer, {})
             wife = individuals_dict.get(wife_pointer, {})
+
+            children_info = []
+            for child_ptr in child_pointers:
+                child_data = individuals_dict.get(child_ptr)
+                if child_data:
+                    if not is_recent(child_data.get("birth_date", ""), birth_cutoff):
+                        child_name = child_data.get("name", "")
+                        if child_name: # Only add child if name is present
+                            birth_year = extract_year(child_data.get("birth_date", ""))
+                            if birth_year:
+                                children_info.append(f"{child_name} *{birth_year}")
+                            else:
+                                children_info.append(child_name)
+            
+            children_string = ", ".join(children_info)
 
             record = {
                 "husband_name": husb.get("name", ""),
@@ -552,13 +572,14 @@ def main():
             }
             if marr_link:
                 record["link"] = marr_link
+            if children_string:
+                record["children"] = children_string
+                
             families_data.append(record)
 
         # --- 3. Filter recent records (privacy) ---
         # Births/families: exclude if within last 100 years, unless the person died 20+ years ago.
         # Deaths: exclude if within last 20 years.
-        birth_cutoff = datetime.now().year - 100
-        death_cutoff = datetime.now().year - 20
 
         def died_long_ago(date_str):
             """Returns True if date_str contains a year at or before death_cutoff."""
