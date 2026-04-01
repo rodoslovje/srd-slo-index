@@ -325,16 +325,44 @@ def main():
             meta_families_count = meta.get("families_count", 0)
             meta_deaths_count = meta.get("deaths_count", 0)
             meta_links_count = meta.get("links_count", 0)
-            if (
+            is_up_to_date = (
                 db_last_modified == last_modified
                 and db_births_count == meta_births_count
                 and db_families_count == meta_families_count
                 and db_deaths_count == meta_deaths_count
                 and db_links_count == meta_links_count
-            ):
+            )
+
+            if is_up_to_date:
                 print(
                     f"\nSkipping contributor {index}/{total_contributors}: {contributor_id} (up to date)"
                 )
+                continue
+            else:
+                print(
+                    f"\nProcessing contributor {index}/{total_contributors}: {contributor_id} (mismatch detected)"
+                )
+                if db_last_modified != last_modified:
+                    print(
+                        f"  -> Mismatch in last_modified: DB='{db_last_modified}' vs Meta='{last_modified}'"
+                    )
+                if db_births_count != meta_births_count:
+                    print(
+                        f"  -> Mismatch in births_count: DB={db_births_count} vs Meta={meta_births_count}"
+                    )
+                if db_families_count != meta_families_count:
+                    print(
+                        f"  -> Mismatch in families_count: DB={db_families_count} vs Meta={meta_families_count}"
+                    )
+                if db_deaths_count != meta_deaths_count:
+                    print(
+                        f"  -> Mismatch in deaths_count: DB={db_deaths_count} vs Meta={meta_deaths_count}"
+                    )
+                if db_links_count != meta_links_count:
+                    print(
+                        f"  -> Mismatch in links_count: DB={db_links_count} vs Meta={meta_links_count}"
+                    )
+                import_contributor(db, contributor_id, last_modified)
                 continue
 
         print(
