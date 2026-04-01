@@ -141,17 +141,27 @@ def get_db_state(db, contributor_name):
 
 def find_data_file(directory, filename):
     """
-    Find a file in the directory, falling back to case-insensitive and
-    Unicode normalization-insensitive matching if the exact path isn't found.
+    Find a file in the directory, falling back to case-insensitive,
+    Unicode-insensitive matching, and an aggressive alphanumeric fallback.
     """
     exact_path = os.path.join(directory, filename)
     if os.path.exists(exact_path):
         return exact_path
 
     if os.path.isdir(directory):
-        target = unicodedata.normalize("NFC", filename).lower()
+        # 1. Normalize and casefold for robust cross-platform Unicode comparison
+        target = unicodedata.normalize("NFD", filename).casefold()
         for f in os.listdir(directory):
-            if unicodedata.normalize("NFC", f).lower() == target:
+            if unicodedata.normalize("NFD", f).casefold() == target:
+                return os.path.join(directory, f)
+
+        # 2. Aggressive fallback: strip everything except alphanumeric
+        target_clean = "".join(c for c in target if c.isalnum())
+        for f in os.listdir(directory):
+            f_clean = "".join(
+                c for c in unicodedata.normalize("NFD", f).casefold() if c.isalnum()
+            )
+            if f_clean == target_clean:
                 return os.path.join(directory, f)
 
     return exact_path
@@ -237,6 +247,8 @@ def import_contributor(db, contributor_id, last_modified):
                 ),
                 death,
             )
+    else:
+        print(f"  -> WARNING: Could not find deaths file at {deaths_file}")
 
     db.commit()
 
