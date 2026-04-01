@@ -22,6 +22,7 @@ class Family(Base):
     husband_surname = Column(Text, index=True)
     wife_name = Column(Text, index=True)
     wife_surname = Column(Text, index=True)
+    children = Column(Text)
     date_of_marriage = Column(Text)
     place_of_marriage = Column(Text)
     contributor = Column(Text, index=True)

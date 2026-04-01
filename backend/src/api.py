@@ -40,7 +40,10 @@ def read_contributors(db: Session = Depends(get_db)):
 
 @app.get("/api/search/general")
 def search_general(
-    q: Optional[str] = None, limit: int = 500, exact: bool = False, db: Session = Depends(get_db)
+    q: Optional[str] = None,
+    limit: int = 500,
+    exact: bool = False,
+    db: Session = Depends(get_db),
 ):
     if not q:
         return {"births": [], "families": []}
@@ -61,9 +64,16 @@ def search_advanced_births(
     db: Session = Depends(get_db),
 ):
     return crud.search_advanced_births(
-        db, name, surname, date_of_birth, date_of_birth_to=date_of_birth_to,
-        place_of_birth=place_of_birth, contributor=contributor, has_link=has_link,
-        limit=limit, exact=exact
+        db,
+        name,
+        surname,
+        date_of_birth,
+        date_of_birth_to=date_of_birth_to,
+        place_of_birth=place_of_birth,
+        contributor=contributor,
+        has_link=has_link,
+        limit=limit,
+        exact=exact,
     )
 
 
@@ -73,6 +83,7 @@ def search_advanced_families(
     husband_surname: Optional[str] = None,
     wife_name: Optional[str] = None,
     wife_surname: Optional[str] = None,
+    children: Optional[str] = None,
     date_of_marriage: Optional[str] = None,
     date_of_marriage_to: Optional[str] = None,
     place_of_marriage: Optional[str] = None,
@@ -88,6 +99,7 @@ def search_advanced_families(
         husband_surname,
         wife_name,
         wife_surname,
+        children,
         date_of_marriage,
         date_of_marriage_to=date_of_marriage_to,
         place_of_marriage=place_of_marriage,
@@ -112,7 +124,14 @@ def search_advanced_deaths(
     db: Session = Depends(get_db),
 ):
     return crud.search_advanced_deaths(
-        db, name, surname, date_of_death, date_of_death_to=date_of_death_to,
-        place_of_death=place_of_death, contributor=contributor, has_link=has_link,
-        limit=limit, exact=exact
+        db,
+        name,
+        surname,
+        date_of_death,
+        date_of_death_to=date_of_death_to,
+        place_of_death=place_of_death,
+        contributor=contributor,
+        has_link=has_link,
+        limit=limit,
+        exact=exact,
     )

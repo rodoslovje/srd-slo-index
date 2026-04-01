@@ -23,6 +23,7 @@ class FamilyBase(BaseModel):
     husband_surname: str
     wife_name: str
     wife_surname: str
+    children: Optional[str] = None
     date_of_marriage: str
     place_of_marriage: str
     contributor: str

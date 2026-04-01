@@ -37,7 +37,7 @@ def setup_full(db):
             id SERIAL PRIMARY KEY, name TEXT, surname TEXT, date_of_birth TEXT, place_of_birth TEXT, contributor TEXT, link TEXT
         );
         CREATE TABLE families (
-            id SERIAL PRIMARY KEY, husband_name TEXT, husband_surname TEXT, wife_name TEXT, wife_surname TEXT, date_of_marriage TEXT, place_of_marriage TEXT, contributor TEXT, link TEXT
+            id SERIAL PRIMARY KEY, husband_name TEXT, husband_surname TEXT, wife_name TEXT, wife_surname TEXT, children TEXT, date_of_marriage TEXT, place_of_marriage TEXT, contributor TEXT, link TEXT
         );
         CREATE TABLE deaths (
             id SERIAL PRIMARY KEY, name TEXT, surname TEXT, date_of_death TEXT, place_of_death TEXT, contributor TEXT, link TEXT
@@ -47,6 +47,7 @@ def setup_full(db):
         CREATE INDEX idx_birth_surname_trgm ON births USING gist (surname gist_trgm_ops);
         CREATE INDEX idx_family_h_surname_trgm ON families USING gist (husband_surname gist_trgm_ops);
         CREATE INDEX idx_family_w_surname_trgm ON families USING gist (wife_surname gist_trgm_ops);
+        CREATE INDEX idx_family_children_trgm ON families USING gist (children gist_trgm_ops);
     """
         )
     )
@@ -69,18 +70,20 @@ def setup_update(db):
             id SERIAL PRIMARY KEY, name TEXT, surname TEXT, date_of_birth TEXT, place_of_birth TEXT, contributor TEXT, link TEXT
         );
         CREATE TABLE IF NOT EXISTS families (
-            id SERIAL PRIMARY KEY, husband_name TEXT, husband_surname TEXT, wife_name TEXT, wife_surname TEXT, date_of_marriage TEXT, place_of_marriage TEXT, contributor TEXT, link TEXT
+            id SERIAL PRIMARY KEY, husband_name TEXT, husband_surname TEXT, wife_name TEXT, wife_surname TEXT, children TEXT, date_of_marriage TEXT, place_of_marriage TEXT, contributor TEXT, link TEXT
         );
         CREATE TABLE IF NOT EXISTS deaths (
             id SERIAL PRIMARY KEY, name TEXT, surname TEXT, date_of_death TEXT, place_of_death TEXT, contributor TEXT, link TEXT
         );
         ALTER TABLE births ADD COLUMN IF NOT EXISTS link TEXT;
         ALTER TABLE families ADD COLUMN IF NOT EXISTS link TEXT;
+        ALTER TABLE families ADD COLUMN IF NOT EXISTS children TEXT;
 
         CREATE INDEX IF NOT EXISTS idx_birth_name_trgm ON births USING gist (name gist_trgm_ops);
         CREATE INDEX IF NOT EXISTS idx_birth_surname_trgm ON births USING gist (surname gist_trgm_ops);
         CREATE INDEX IF NOT EXISTS idx_family_h_surname_trgm ON families USING gist (husband_surname gist_trgm_ops);
         CREATE INDEX IF NOT EXISTS idx_family_w_surname_trgm ON families USING gist (wife_surname gist_trgm_ops);
+        CREATE INDEX IF NOT EXISTS idx_family_children_trgm ON families USING gist (children gist_trgm_ops);
     """
         )
     )
@@ -97,11 +100,15 @@ def get_db_state(db, contributor_name):
         return None, 0, 0
     lm = row[0]
     birth_links = db.execute(
-        text("SELECT COUNT(*) FROM births WHERE contributor = :name AND link IS NOT NULL AND link != ''"),
+        text(
+            "SELECT COUNT(*) FROM births WHERE contributor = :name AND link IS NOT NULL AND link != ''"
+        ),
         {"name": contributor_name},
     ).scalar()
     family_links = db.execute(
-        text("SELECT COUNT(*) FROM families WHERE contributor = :name AND link IS NOT NULL AND link != ''"),
+        text(
+            "SELECT COUNT(*) FROM families WHERE contributor = :name AND link IS NOT NULL AND link != ''"
+        ),
         {"name": contributor_name},
     ).scalar()
     deaths_count = db.execute(
@@ -117,9 +124,15 @@ def import_contributor(db, contributor_id, last_modified):
     families_file = os.path.join(DATA_DIR, f"{contributor_id}-families.json")
 
     # Remove stale records before reinserting
-    db.execute(text("DELETE FROM births WHERE contributor = :name"), {"name": contributor_id})
-    db.execute(text("DELETE FROM families WHERE contributor = :name"), {"name": contributor_id})
-    db.execute(text("DELETE FROM deaths WHERE contributor = :name"), {"name": contributor_id})
+    db.execute(
+        text("DELETE FROM births WHERE contributor = :name"), {"name": contributor_id}
+    )
+    db.execute(
+        text("DELETE FROM families WHERE contributor = :name"), {"name": contributor_id}
+    )
+    db.execute(
+        text("DELETE FROM deaths WHERE contributor = :name"), {"name": contributor_id}
+    )
 
     # Update contributor timestamp
     db.execute(
@@ -156,12 +169,13 @@ def import_contributor(db, contributor_id, last_modified):
         for family in families_data:
             family["contributor"] = contributor_id
             family.setdefault("link", None)
+            family.setdefault("children", None)
             db.execute(
                 text(
                     "INSERT INTO families (husband_name, husband_surname, wife_name, wife_surname, "
-                    "date_of_marriage, place_of_marriage, contributor, link) "
+                    "children, date_of_marriage, place_of_marriage, contributor, link) "
                     "VALUES (:husband_name, :husband_surname, :wife_name, :wife_surname, "
-                    ":date_of_marriage, :place_of_marriage, :contributor, :link)"
+                    ":children, :date_of_marriage, :place_of_marriage, :contributor, :link)"
                 ),
                 family,
             )
@@ -198,7 +212,7 @@ def main():
         choices=["update", "full"],
         default="update",
         help="update (default): only reimport contributors whose data has changed; "
-             "full: drop and rebuild all tables from scratch.",
+        "full: drop and rebuild all tables from scratch.",
     )
     args = parser.parse_args()
     full_mode = args.mode == "full"
@@ -233,10 +247,19 @@ def main():
         for (name,) in stale:
             if name not in known:
                 print(f"\nRemoving stale contributor: {name}")
-                db.execute(text("DELETE FROM births WHERE contributor = :name"), {"name": name})
-                db.execute(text("DELETE FROM families WHERE contributor = :name"), {"name": name})
-                db.execute(text("DELETE FROM deaths WHERE contributor = :name"), {"name": name})
-                db.execute(text("DELETE FROM contributors WHERE name = :name"), {"name": name})
+                db.execute(
+                    text("DELETE FROM births WHERE contributor = :name"), {"name": name}
+                )
+                db.execute(
+                    text("DELETE FROM families WHERE contributor = :name"),
+                    {"name": name},
+                )
+                db.execute(
+                    text("DELETE FROM deaths WHERE contributor = :name"), {"name": name}
+                )
+                db.execute(
+                    text("DELETE FROM contributors WHERE name = :name"), {"name": name}
+                )
         db.commit()
 
     for meta in metadata:
@@ -244,12 +267,16 @@ def main():
         last_modified = meta.get("last_modified", "")
 
         if not full_mode:
-            db_last_modified, db_links_count, db_deaths_count = get_db_state(db, contributor_id)
+            db_last_modified, db_links_count, db_deaths_count = get_db_state(
+                db, contributor_id
+            )
             meta_links_count = meta.get("links_count", 0)
             meta_deaths_count = meta.get("deaths_count", 0)
-            if (db_last_modified == last_modified
-                    and db_links_count == meta_links_count
-                    and db_deaths_count == meta_deaths_count):
+            if (
+                db_last_modified == last_modified
+                and db_links_count == meta_links_count
+                and db_deaths_count == meta_deaths_count
+            ):
                 print(f"\nSkipping contributor: {contributor_id} (up to date)")
                 continue
 

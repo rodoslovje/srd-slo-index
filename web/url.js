@@ -11,6 +11,7 @@ export const PARAM_MAP = {
   husband_surname:  'hsn',
   wife_name:        'wn',
   wife_surname:     'wsn',
+  children:         'ch',
   date_of_marriage: 'dom',
   place_of_marriage:'pom',
   contributor:          'c',
