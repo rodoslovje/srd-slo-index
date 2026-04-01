@@ -108,6 +108,14 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         html += `<td class="col-center">${val}</td>`;
       } else if (RIGHT_COLUMNS.has(col)) {
         html += `<td class="col-right">${row[col] || ''}</td>`;
+      } else if (col === 'children' && row[col]) {
+        const childrenList = row[col].split(', ');
+        html += `<td>
+          <details class="expandable-cell">
+            <summary>${childrenList.length}</summary>
+            <div class="expanded-content">${childrenList.join('<br>')}</div>
+          </details>
+        </td>`;
       } else {
         html += `<td>${row[col] || ''}</td>`;
       }

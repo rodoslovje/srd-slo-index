@@ -92,6 +92,31 @@ th.sortable { cursor: pointer; user-select: none; transition: background 0.2s; }
 th.sortable:hover { background: #e0e0e0; }
 tr:hover { background: #f5f5f5; }
 
+/* --- Expandable cells for long lists (e.g. children) --- */
+.expandable-cell summary {
+  cursor: pointer;
+  outline: none;
+  user-select: none;
+}
+.expandable-cell summary:hover {
+  text-decoration: underline;
+}
+.expandable-cell .more-badge {
+  font-size: 0.85em;
+  background: #e0e0e0;
+  color: #555;
+  padding: 2px 6px;
+  border-radius: 10px;
+  margin-left: 4px;
+  font-weight: normal;
+}
+.expandable-cell .expanded-content {
+  padding-top: 4px;
+  padding-left: 16px;
+  color: #444;
+  line-height: 1.4;
+}
+
 h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 5px; }
 
 .loading { text-align: center; font-size: 1.2rem; color: var(--secondary); padding: 2rem; }
