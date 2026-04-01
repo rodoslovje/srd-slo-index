@@ -111,11 +111,21 @@ def get_db_state(db, contributor_name):
         ),
         {"name": contributor_name},
     ).scalar()
+    death_links = db.execute(
+        text(
+            "SELECT COUNT(*) FROM deaths WHERE contributor = :name AND link IS NOT NULL AND link != ''"
+        ),
+        {"name": contributor_name},
+    ).scalar()
     deaths_count = db.execute(
         text("SELECT COUNT(*) FROM deaths WHERE contributor = :name"),
         {"name": contributor_name},
     ).scalar()
-    return lm, (birth_links or 0) + (family_links or 0), (deaths_count or 0)
+    return (
+        lm,
+        (birth_links or 0) + (family_links or 0) + (death_links or 0),
+        (deaths_count or 0),
+    )
 
 
 def import_contributor(db, contributor_id, last_modified):

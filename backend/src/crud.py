@@ -32,6 +32,12 @@ def get_contributors(db: Session):
         .group_by(models.Family.contributor)
         .all()
     )
+    death_links = dict(
+        db.query(models.Death.contributor, func.count(models.Death.id))
+        .filter(models.Death.link.isnot(None), models.Death.link != "")
+        .group_by(models.Death.contributor)
+        .all()
+    )
     return [
         {
             "name": c.name,
@@ -39,7 +45,9 @@ def get_contributors(db: Session):
             "births_count": births_counts.get(c.name, 0),
             "families_count": families_counts.get(c.name, 0),
             "deaths_count": deaths_counts.get(c.name, 0),
-            "links_count": birth_links.get(c.name, 0) + family_links.get(c.name, 0),
+            "links_count": birth_links.get(c.name, 0)
+            + family_links.get(c.name, 0)
+            + death_links.get(c.name, 0),
         }
         for c in db.query(models.Contributor).all()
     ]
