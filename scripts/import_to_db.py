@@ -212,15 +212,22 @@ def main():
         choices=["update", "full"],
         default="update",
         help="update (default): only reimport contributors whose data has changed; "
-        "full: drop and rebuild all tables from scratch.",
+        "full: re-import all contributors regardless of modification time.",
+    )
+    parser.add_argument(
+        "--drop-tables",
+        action="store_true",
+        help="Drop and recreate all tables from scratch before importing.",
     )
     args = parser.parse_args()
-    full_mode = args.mode == "full"
+    full_mode = args.mode == "full" or args.drop_tables
 
     db = SessionLocal()
-    print(f"Connecting to the database (mode: {args.mode})...")
+    print(
+        f"Connecting to the database (mode: {args.mode}, drop_tables: {args.drop_tables})..."
+    )
 
-    if full_mode:
+    if args.drop_tables:
         setup_full(db)
     else:
         setup_update(db)
@@ -241,7 +248,7 @@ def main():
         metadata = json.load(f)
 
     # --- Remove contributors no longer in metadata (e.g. deleted GED files) ---
-    if not full_mode:
+    if not args.drop_tables:
         known = {m["contributor"] for m in metadata}
         stale = db.execute(text("SELECT name FROM contributors")).fetchall()
         for (name,) in stale:
