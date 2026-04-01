@@ -298,7 +298,8 @@ def main():
                 )
         db.commit()
 
-    for meta in metadata:
+    total_contributors = len(metadata)
+    for index, meta in enumerate(metadata, start=1):
         contributor_id = meta["contributor"]
         last_modified = meta.get("last_modified", "")
 
@@ -313,10 +314,14 @@ def main():
                 and db_links_count == meta_links_count
                 and db_deaths_count == meta_deaths_count
             ):
-                print(f"\nSkipping contributor: {contributor_id} (up to date)")
+                print(
+                    f"\nSkipping contributor {index}/{total_contributors}: {contributor_id} (up to date)"
+                )
                 continue
 
-        print(f"\nProcessing contributor: {contributor_id}")
+        print(
+            f"\nProcessing contributor {index}/{total_contributors}: {contributor_id}"
+        )
         import_contributor(db, contributor_id, last_modified)
 
     print("\nData import finished successfully.")

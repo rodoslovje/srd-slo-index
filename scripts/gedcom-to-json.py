@@ -447,7 +447,8 @@ def main():
     metadata = []
 
     # Process each file found.
-    for filename in gedcom_files:
+    total_files = len(gedcom_files)
+    for index, filename in enumerate(gedcom_files, start=1):
         contributor_id = unicodedata.normalize(
             "NFC",
             "-".join(
@@ -470,7 +471,9 @@ def main():
             )
             and not needs_processing(input_path, deaths_output_path, deaths_output_path)
         ):
-            print(f"\nSkipping {filename} (JSON is up to date).")
+            print(
+                f"\nSkipping file {index}/{total_files}: {filename} (JSON is up to date)."
+            )
             # Still include in metadata using the existing JSON counts
             try:
                 with open(births_output_path, encoding="utf-8") as f:
@@ -500,7 +503,9 @@ def main():
                 pass
             continue
 
-        print(f"\nProcessing file: {filename} (Contributor: {contributor_id})")
+        print(
+            f"\nProcessing file {index}/{total_files}: {filename} (Contributor: {contributor_id})"
+        )
 
         # Initialize lists to hold extracted records for this file.
         births_data = []
