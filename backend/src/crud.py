@@ -75,7 +75,10 @@ def _date_filter(column, from_val: str = None, to_val: str = None, exact: bool =
 
 def _text_filter(column, value, exact: bool):
     if exact:
-        return column.ilike(f"%{value}%")  # case-insensitive exact substring match
+        safe_value = re.sub(r"([.*+?^${}()|\[\]\\])", r"\\\1", value)
+        return column.op("~*")(
+            f"\\y{safe_value}\\y"
+        )  # case-insensitive word boundary match
     return or_(column.op("%")(cast(value, Text)), column.ilike(f"%{value}%"))
 
 
