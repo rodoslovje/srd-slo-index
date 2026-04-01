@@ -4,6 +4,7 @@ import argparse
 import os
 import json
 import re
+import urllib.request
 import unicodedata
 from datetime import datetime
 from gedcom.parser import Parser
@@ -226,6 +227,67 @@ def _indi_level_link(element, sources_dict):
             if url:
                 return url
     return ""
+
+
+_URL_CACHE = {}
+
+
+def _determine_link_type(url):
+    if not url:
+        return "unknown"
+
+    # Strip query parameters (like ?pg=N) to cache and fetch at the book level
+    base_url = url.split("?")[0]
+
+    if base_url in _URL_CACHE:
+        return _URL_CACHE[base_url]
+
+    try:
+        req = urllib.request.Request(
+            base_url,
+            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"},
+        )
+        with urllib.request.urlopen(req, timeout=5) as response:
+            html = response.read().decode("utf-8", errors="ignore")
+            if "Taufbuch" in html:
+                _URL_CACHE[base_url] = "birth"
+            elif "Sterbebuch" in html:
+                _URL_CACHE[base_url] = "death"
+            elif "Trauungsbuch" in html:
+                _URL_CACHE[base_url] = "marriage"
+            else:
+                _URL_CACHE[base_url] = "unknown"
+    except Exception:
+        _URL_CACHE[base_url] = "unknown"
+
+    return _URL_CACHE[base_url]
+
+
+def _extract_indi_links(element, sources_dict):
+    """
+    Extract matricula URLs from NOTE or SOUR at the INDI level.
+    Checks the HTML content of the URL to determine if it belongs
+    to a birth, death, or marriage record.
+    """
+    b_link, d_link, m_link = "", "", ""
+    for child in element.get_child_elements():
+        if child.get_tag() in ("NOTE", "SOUR"):
+            url = _link_from_subelement(child, sources_dict)
+            if url:
+                link_type = _determine_link_type(url)
+                if link_type == "birth":
+                    if not b_link:
+                        b_link = url
+                elif link_type == "death":
+                    if not d_link:
+                        d_link = url
+                elif link_type == "marriage":
+                    if not m_link:
+                        m_link = url
+                else:
+                    if not b_link:
+                        b_link = url
+    return b_link, d_link, m_link
 
 
 def build_obje_dict(root_elements):
@@ -505,11 +567,14 @@ def main():
                 death_date, death_place, death_link = get_event_data(
                     element, "DEAT", sources_dict
                 )
-                # Fallback: link at INDI level (e.g. KOŠIR.GED stores NOTE on INDI, not inside BIRT)
+                # Fallback: link at INDI level, fetching HTML to determine type
+                indi_b_link, indi_d_link, indi_m_link = _extract_indi_links(
+                    element, sources_dict
+                )
                 if not birth_link:
-                    birth_link = _indi_level_link(element, sources_dict)
+                    birth_link = indi_b_link
                 if not death_link:
-                    death_link = _indi_level_link(element, sources_dict)
+                    death_link = indi_d_link
 
                 is_deceased_flag = any(
                     child.get_tag() in ("DEAT", "BURI")
@@ -522,6 +587,7 @@ def main():
                     "surname": surname,
                     "birth_date": birth_date,
                     "is_deceased": is_deceased_flag,
+                    "marr_link": indi_m_link,
                 }
 
                 if birth_date or birth_place:
@@ -580,6 +646,10 @@ def main():
 
             husb = individuals_dict.get(husb_pointer, {})
             wife = individuals_dict.get(wife_pointer, {})
+
+            # Use INDI-level marriage links if FAM-level is missing
+            if not marr_link:
+                marr_link = husb.get("marr_link", "") or wife.get("marr_link", "")
 
             children_info = []
             for child_ptr in child_pointers:
