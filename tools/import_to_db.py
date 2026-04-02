@@ -32,7 +32,16 @@ def setup_full(db):
         CREATE TABLE contributors (
             id SERIAL PRIMARY KEY,
             name VARCHAR(255) UNIQUE NOT NULL,
-            last_modified VARCHAR(255)
+            last_modified VARCHAR(255),
+            births_count INTEGER DEFAULT 0,
+            families_count INTEGER DEFAULT 0,
+            deaths_count INTEGER DEFAULT 0,
+            links_count INTEGER DEFAULT 0
+            last_modified VARCHAR(255),
+            births_count INTEGER DEFAULT 0,
+            families_count INTEGER DEFAULT 0,
+            deaths_count INTEGER DEFAULT 0,
+            links_count INTEGER DEFAULT 0
         );
         CREATE TABLE births (
             id SERIAL PRIMARY KEY, name TEXT, surname TEXT, date_of_birth TEXT, place_of_birth TEXT, contributor TEXT, link TEXT
@@ -82,6 +91,11 @@ def setup_update(db):
         ALTER TABLE families ADD COLUMN IF NOT EXISTS link TEXT;
         ALTER TABLE families ADD COLUMN IF NOT EXISTS children TEXT;
 
+        ALTER TABLE contributors ADD COLUMN IF NOT EXISTS births_count INTEGER DEFAULT 0;
+        ALTER TABLE contributors ADD COLUMN IF NOT EXISTS families_count INTEGER DEFAULT 0;
+        ALTER TABLE contributors ADD COLUMN IF NOT EXISTS deaths_count INTEGER DEFAULT 0;
+        ALTER TABLE contributors ADD COLUMN IF NOT EXISTS links_count INTEGER DEFAULT 0;
+
         CREATE INDEX IF NOT EXISTS idx_birth_name_trgm ON births USING gist (name gist_trgm_ops);
         CREATE INDEX IF NOT EXISTS idx_birth_surname_trgm ON births USING gist (surname gist_trgm_ops);
         CREATE INDEX IF NOT EXISTS idx_family_h_surname_trgm ON families USING gist (husband_surname gist_trgm_ops);
@@ -96,51 +110,16 @@ def setup_update(db):
 
 
 def get_db_state(db, contributor_name):
-    """Returns (last_modified, births_count, families_count, deaths_count, links_count) stored in DB, or (None, 0, 0, 0, 0)."""
+    """Returns pre-calculated stats stored in DB, or (None, 0, 0, 0, 0)."""
     row = db.execute(
-        text("SELECT last_modified FROM contributors WHERE name = :name"),
+        text(
+            "SELECT last_modified, births_count, families_count, deaths_count, links_count FROM contributors WHERE name = :name"
+        ),
         {"name": contributor_name},
     ).fetchone()
     if not row:
         return None, 0, 0, 0, 0
-    lm = row[0]
-    births_count = db.execute(
-        text("SELECT COUNT(*) FROM births WHERE contributor = :name"),
-        {"name": contributor_name},
-    ).scalar()
-    families_count = db.execute(
-        text("SELECT COUNT(*) FROM families WHERE contributor = :name"),
-        {"name": contributor_name},
-    ).scalar()
-    birth_links = db.execute(
-        text(
-            "SELECT COUNT(*) FROM births WHERE contributor = :name AND link IS NOT NULL AND link != ''"
-        ),
-        {"name": contributor_name},
-    ).scalar()
-    family_links = db.execute(
-        text(
-            "SELECT COUNT(*) FROM families WHERE contributor = :name AND link IS NOT NULL AND link != ''"
-        ),
-        {"name": contributor_name},
-    ).scalar()
-    death_links = db.execute(
-        text(
-            "SELECT COUNT(*) FROM deaths WHERE contributor = :name AND link IS NOT NULL AND link != ''"
-        ),
-        {"name": contributor_name},
-    ).scalar()
-    deaths_count = db.execute(
-        text("SELECT COUNT(*) FROM deaths WHERE contributor = :name"),
-        {"name": contributor_name},
-    ).scalar()
-    return (
-        lm,
-        (births_count or 0),
-        (families_count or 0),
-        (deaths_count or 0),
-        (birth_links or 0) + (family_links or 0) + (death_links or 0),
-    )
+    return row[0], row[1], row[2], row[3], row[4]
 
 
 def find_data_file(directory, filename):
@@ -175,18 +154,32 @@ def import_contributor(
     db,
     contributor_id,
     last_modified,
+    births_count,
+    families_count,
+    deaths_count,
+    links_count,
     imp_births=True,
     imp_families=True,
     imp_deaths=True,
 ):
     """Delete existing records for contributor and reinsert from JSON files."""
-    # Update contributor timestamp
+    # Update contributor timestamp and pre-calculated stats
     db.execute(
         text(
-            "INSERT INTO contributors (name, last_modified) VALUES (:name, :last_modified) "
-            "ON CONFLICT (name) DO UPDATE SET last_modified = :last_modified;"
+            "INSERT INTO contributors (name, last_modified, births_count, families_count, deaths_count, links_count) "
+            "VALUES (:name, :last_modified, :births_count, :families_count, :deaths_count, :links_count) "
+            "ON CONFLICT (name) DO UPDATE SET "
+            "last_modified = :last_modified, births_count = :births_count, "
+            "families_count = :families_count, deaths_count = :deaths_count, links_count = :links_count;"
         ),
-        {"name": contributor_id, "last_modified": last_modified},
+        {
+            "name": contributor_id,
+            "last_modified": last_modified,
+            "births_count": births_count,
+            "families_count": families_count,
+            "deaths_count": deaths_count,
+            "links_count": links_count,
+        },
     )
 
     # Load Births
@@ -359,6 +352,10 @@ def main():
     for index, meta in enumerate(metadata, start=1):
         contributor_id = meta["contributor"]
         last_modified = meta.get("last_modified", "")
+        meta_births_count = meta.get("births_count", 0)
+        meta_families_count = meta.get("families_count", 0)
+        meta_deaths_count = meta.get("deaths_count", 0)
+        meta_links_count = meta.get("links_count", 0)
 
         do_import = False
         imp_births = imp_families = imp_deaths = False
@@ -377,11 +374,6 @@ def main():
                 db_deaths_count,
                 db_links_count,
             ) = get_db_state(db, contributor_id)
-
-            meta_births_count = meta.get("births_count", 0)
-            meta_families_count = meta.get("families_count", 0)
-            meta_deaths_count = meta.get("deaths_count", 0)
-            meta_links_count = meta.get("links_count", 0)
 
             is_up_to_date = (
                 db_last_modified == last_modified
@@ -434,7 +426,16 @@ def main():
 
         if do_import:
             import_contributor(
-                db, contributor_id, last_modified, imp_births, imp_families, imp_deaths
+                db,
+                contributor_id,
+                last_modified,
+                meta_births_count,
+                meta_families_count,
+                meta_deaths_count,
+                meta_links_count,
+                imp_births,
+                imp_families,
+                imp_deaths,
             )
 
     print("\nData import finished successfully.")

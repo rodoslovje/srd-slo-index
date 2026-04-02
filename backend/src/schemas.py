@@ -73,3 +73,6 @@ class Contributor(BaseModel):
     families_count: int
     deaths_count: int
     links_count: int
+
+    class Config:
+        from_attributes = True

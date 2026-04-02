@@ -47,3 +47,7 @@ class Contributor(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(Text, unique=True, index=True)
     last_modified = Column(Text)
+    births_count = Column(Integer, default=0)
+    families_count = Column(Integer, default=0)
+    deaths_count = Column(Integer, default=0)
+    links_count = Column(Integer, default=0)

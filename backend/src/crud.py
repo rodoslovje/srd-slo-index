@@ -5,66 +5,12 @@ from sqlalchemy import func, or_, and_, text, cast, Text, Integer
 from . import models
 
 CACHE_TTL = 3600  # Cache duration in seconds (1 hour)
-_contributors_cache = {"data": None, "time": 0}
 _timeline_cache = {"data": None, "time": 0}
 
 
 def get_contributors(db: Session):
-    now = time.time()
-    if _contributors_cache["data"] is not None and (
-        now - _contributors_cache["time"] < CACHE_TTL
-    ):
-        return _contributors_cache["data"]
-
-    births_counts = dict(
-        db.query(models.Birth.contributor, func.count(models.Birth.id))
-        .group_by(models.Birth.contributor)
-        .all()
-    )
-    families_counts = dict(
-        db.query(models.Family.contributor, func.count(models.Family.id))
-        .group_by(models.Family.contributor)
-        .all()
-    )
-    deaths_counts = dict(
-        db.query(models.Death.contributor, func.count(models.Death.id))
-        .group_by(models.Death.contributor)
-        .all()
-    )
-    birth_links = dict(
-        db.query(models.Birth.contributor, func.count(models.Birth.id))
-        .filter(models.Birth.link.isnot(None), models.Birth.link != "")
-        .group_by(models.Birth.contributor)
-        .all()
-    )
-    family_links = dict(
-        db.query(models.Family.contributor, func.count(models.Family.id))
-        .filter(models.Family.link.isnot(None), models.Family.link != "")
-        .group_by(models.Family.contributor)
-        .all()
-    )
-    death_links = dict(
-        db.query(models.Death.contributor, func.count(models.Death.id))
-        .filter(models.Death.link.isnot(None), models.Death.link != "")
-        .group_by(models.Death.contributor)
-        .all()
-    )
-    result = [
-        {
-            "name": c.name,
-            "last_modified": c.last_modified,
-            "births_count": births_counts.get(c.name, 0),
-            "families_count": families_counts.get(c.name, 0),
-            "deaths_count": deaths_counts.get(c.name, 0),
-            "links_count": birth_links.get(c.name, 0)
-            + family_links.get(c.name, 0)
-            + death_links.get(c.name, 0),
-        }
-        for c in db.query(models.Contributor).all()
-    ]
-    _contributors_cache["data"] = result
-    _contributors_cache["time"] = now
-    return result
+    """Fetch pre-calculated stats directly from the contributors table."""
+    return db.query(models.Contributor).all()
 
 
 def get_timeline_distribution(db: Session):
