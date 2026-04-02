@@ -67,6 +67,8 @@ function exportToCSV(data, columns, filename) {
     if (activeFilters.length > 0) {
       csvContent += `\n\n"${t('tab_search').replace(/"/g, '""')}"`;
       csvContent += '\n' + activeFilters.join('\n');
+      const fullUrl = window.location.href;
+      csvContent += `\n"${t('col_url').replace(/"/g, '""')}","${fullUrl.replace(/"/g, '""')}"`;
     }
   }
 
