@@ -167,22 +167,15 @@ def find_data_file(directory, filename):
     return exact_path
 
 
-def import_contributor(db, contributor_id, last_modified):
+def import_contributor(
+    db,
+    contributor_id,
+    last_modified,
+    imp_births=True,
+    imp_families=True,
+    imp_deaths=True,
+):
     """Delete existing records for contributor and reinsert from JSON files."""
-    births_file = find_data_file(DATA_DIR, f"{contributor_id}-births.json")
-    families_file = find_data_file(DATA_DIR, f"{contributor_id}-families.json")
-
-    # Remove stale records before reinserting
-    db.execute(
-        text("DELETE FROM births WHERE contributor = :name"), {"name": contributor_id}
-    )
-    db.execute(
-        text("DELETE FROM families WHERE contributor = :name"), {"name": contributor_id}
-    )
-    db.execute(
-        text("DELETE FROM deaths WHERE contributor = :name"), {"name": contributor_id}
-    )
-
     # Update contributor timestamp
     db.execute(
         text(
@@ -193,77 +186,100 @@ def import_contributor(db, contributor_id, last_modified):
     )
 
     # Load Births
-    if os.path.exists(births_file):
-        with open(births_file, "r", encoding="utf-8") as f:
-            births_data = json.load(f)
-        print(f"  -> Inserting {len(births_data)} birth records...")
-        for birth in births_data:
-            birth["contributor"] = contributor_id
-            birth.setdefault("link", None)
-            db.execute(
-                text(
-                    "INSERT INTO births (name, surname, date_of_birth, place_of_birth, contributor, link) "
-                    "VALUES (:name, :surname, :date_of_birth, :place_of_birth, :contributor, :link)"
-                ),
-                birth,
-            )
-    else:
-        visible = [
-            f for f in os.listdir(DATA_DIR) if contributor_id.casefold() in f.casefold()
-        ]
-        print(
-            f"  -> WARNING: Could not find births file at {births_file}\n     (Docker sync issue? Container only sees: {visible})"
+    if imp_births:
+        db.execute(
+            text("DELETE FROM births WHERE contributor = :name"),
+            {"name": contributor_id},
         )
+        births_file = find_data_file(DATA_DIR, f"{contributor_id}-births.json")
+        if os.path.exists(births_file):
+            with open(births_file, "r", encoding="utf-8") as f:
+                births_data = json.load(f)
+            print(f"  -> Inserting {len(births_data)} birth records...")
+            for birth in births_data:
+                birth["contributor"] = contributor_id
+                birth.setdefault("link", None)
+                db.execute(
+                    text(
+                        "INSERT INTO births (name, surname, date_of_birth, place_of_birth, contributor, link) "
+                        "VALUES (:name, :surname, :date_of_birth, :place_of_birth, :contributor, :link)"
+                    ),
+                    birth,
+                )
+        else:
+            visible = [
+                f
+                for f in os.listdir(DATA_DIR)
+                if contributor_id.casefold() in f.casefold()
+            ]
+            print(
+                f"  -> WARNING: Could not find births file at {births_file}\n     (Docker sync issue? Container only sees: {visible})"
+            )
 
     # Load Families
-    if os.path.exists(families_file):
-        with open(families_file, "r", encoding="utf-8") as f:
-            families_data = json.load(f)
-        print(f"  -> Inserting {len(families_data)} family records...")
-        for family in families_data:
-            family["contributor"] = contributor_id
-            family.setdefault("link", None)
-            family.setdefault("children", None)
-            db.execute(
-                text(
-                    "INSERT INTO families (husband_name, husband_surname, wife_name, wife_surname, "
-                    "children, date_of_marriage, place_of_marriage, contributor, link) "
-                    "VALUES (:husband_name, :husband_surname, :wife_name, :wife_surname, "
-                    ":children, :date_of_marriage, :place_of_marriage, :contributor, :link)"
-                ),
-                family,
-            )
-    else:
-        visible = [
-            f for f in os.listdir(DATA_DIR) if contributor_id.casefold() in f.casefold()
-        ]
-        print(
-            f"  -> WARNING: Could not find families file at {families_file}\n     (Docker sync issue? Container only sees: {visible})"
+    if imp_families:
+        db.execute(
+            text("DELETE FROM families WHERE contributor = :name"),
+            {"name": contributor_id},
         )
+        families_file = find_data_file(DATA_DIR, f"{contributor_id}-families.json")
+        if os.path.exists(families_file):
+            with open(families_file, "r", encoding="utf-8") as f:
+                families_data = json.load(f)
+            print(f"  -> Inserting {len(families_data)} family records...")
+            for family in families_data:
+                family["contributor"] = contributor_id
+                family.setdefault("link", None)
+                family.setdefault("children", None)
+                db.execute(
+                    text(
+                        "INSERT INTO families (husband_name, husband_surname, wife_name, wife_surname, "
+                        "children, date_of_marriage, place_of_marriage, contributor, link) "
+                        "VALUES (:husband_name, :husband_surname, :wife_name, :wife_surname, "
+                        ":children, :date_of_marriage, :place_of_marriage, :contributor, :link)"
+                    ),
+                    family,
+                )
+        else:
+            visible = [
+                f
+                for f in os.listdir(DATA_DIR)
+                if contributor_id.casefold() in f.casefold()
+            ]
+            print(
+                f"  -> WARNING: Could not find families file at {families_file}\n     (Docker sync issue? Container only sees: {visible})"
+            )
 
     # Load Deaths
-    deaths_file = find_data_file(DATA_DIR, f"{contributor_id}-deaths.json")
-    if os.path.exists(deaths_file):
-        with open(deaths_file, "r", encoding="utf-8") as f:
-            deaths_data = json.load(f)
-        print(f"  -> Inserting {len(deaths_data)} death records...")
-        for death in deaths_data:
-            death["contributor"] = contributor_id
-            death.setdefault("link", None)
-            db.execute(
-                text(
-                    "INSERT INTO deaths (name, surname, date_of_death, place_of_death, contributor, link) "
-                    "VALUES (:name, :surname, :date_of_death, :place_of_death, :contributor, :link)"
-                ),
-                death,
-            )
-    else:
-        visible = [
-            f for f in os.listdir(DATA_DIR) if contributor_id.casefold() in f.casefold()
-        ]
-        print(
-            f"  -> WARNING: Could not find deaths file at {deaths_file}\n     (Docker sync issue? Container only sees: {visible})"
+    if imp_deaths:
+        db.execute(
+            text("DELETE FROM deaths WHERE contributor = :name"),
+            {"name": contributor_id},
         )
+        deaths_file = find_data_file(DATA_DIR, f"{contributor_id}-deaths.json")
+        if os.path.exists(deaths_file):
+            with open(deaths_file, "r", encoding="utf-8") as f:
+                deaths_data = json.load(f)
+            print(f"  -> Inserting {len(deaths_data)} death records...")
+            for death in deaths_data:
+                death["contributor"] = contributor_id
+                death.setdefault("link", None)
+                db.execute(
+                    text(
+                        "INSERT INTO deaths (name, surname, date_of_death, place_of_death, contributor, link) "
+                        "VALUES (:name, :surname, :date_of_death, :place_of_death, :contributor, :link)"
+                    ),
+                    death,
+                )
+        else:
+            visible = [
+                f
+                for f in os.listdir(DATA_DIR)
+                if contributor_id.casefold() in f.casefold()
+            ]
+            print(
+                f"  -> WARNING: Could not find deaths file at {deaths_file}\n     (Docker sync issue? Container only sees: {visible})"
+            )
 
     db.commit()
 
@@ -341,8 +357,11 @@ def main():
         last_modified = meta.get("last_modified", "")
 
         do_import = False
+        imp_births = imp_families = imp_deaths = False
+
         if full_mode:
             do_import = True
+            imp_births = imp_families = imp_deaths = True
             print(
                 f"\nProcessing contributor {index}/{total_contributors}: {contributor_id}"
             )
@@ -377,29 +396,42 @@ def main():
                 print(
                     f"\nProcessing contributor {index}/{total_contributors}: {contributor_id} (mismatch detected)"
                 )
-                if db_last_modified != last_modified:
-                    print(
-                        f"  -> Mismatch in last_modified: DB='{db_last_modified}' vs Meta='{last_modified}'"
-                    )
-                if db_births_count != meta_births_count:
-                    print(
-                        f"  -> Mismatch in births_count: DB={db_births_count} vs Meta={meta_births_count}"
-                    )
-                if db_families_count != meta_families_count:
-                    print(
-                        f"  -> Mismatch in families_count: DB={db_families_count} vs Meta={meta_families_count}"
-                    )
-                if db_deaths_count != meta_deaths_count:
-                    print(
-                        f"  -> Mismatch in deaths_count: DB={db_deaths_count} vs Meta={meta_deaths_count}"
-                    )
-                if db_links_count != meta_links_count:
-                    print(
-                        f"  -> Mismatch in links_count: DB={db_links_count} vs Meta={meta_links_count}"
-                    )
+
+                if (
+                    db_last_modified != last_modified
+                    or db_links_count != meta_links_count
+                ):
+                    imp_births = imp_families = imp_deaths = True
+                    if db_last_modified != last_modified:
+                        print(
+                            f"  -> Mismatch in last_modified: DB='{db_last_modified}' vs Meta='{last_modified}'"
+                        )
+                    if db_links_count != meta_links_count:
+                        print(
+                            f"  -> Mismatch in links_count: DB={db_links_count} vs Meta={meta_links_count}"
+                        )
+                    print("  -> Doing full re-import for this contributor.")
+                else:
+                    if db_births_count != meta_births_count:
+                        imp_births = True
+                        print(
+                            f"  -> Mismatch in births_count: DB={db_births_count} vs Meta={meta_births_count}"
+                        )
+                    if db_families_count != meta_families_count:
+                        imp_families = True
+                        print(
+                            f"  -> Mismatch in families_count: DB={db_families_count} vs Meta={meta_families_count}"
+                        )
+                    if db_deaths_count != meta_deaths_count:
+                        imp_deaths = True
+                        print(
+                            f"  -> Mismatch in deaths_count: DB={db_deaths_count} vs Meta={meta_deaths_count}"
+                        )
 
         if do_import:
-            import_contributor(db, contributor_id, last_modified)
+            import_contributor(
+                db, contributor_id, last_modified, imp_births, imp_families, imp_deaths
+            )
 
     print("\nData import finished successfully.")
     db.close()
