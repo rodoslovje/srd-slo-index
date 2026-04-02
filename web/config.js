@@ -3,9 +3,9 @@ const apiHost = import.meta.env.SGI_API_HOST || 'indeks-api.rodoslovje.si';
 const cleanHost = apiHost.replace(/\/+$/, '');
 export const API_BASE_URL = cleanHost.startsWith('http') ? cleanHost : `https://${cleanHost}`;
 
-export const birthColumns = ['name', 'surname', 'date_of_birth', 'place_of_birth', 'contributor', 'link'];
-export const familyColumns = ['husband_name', 'husband_surname', 'wife_name', 'wife_surname', 'children', 'date_of_marriage', 'place_of_marriage', 'contributor', 'link'];
-export const deathColumns = ['name', 'surname', 'date_of_death', 'place_of_death', 'contributor', 'link'];
+export const birthColumns = ['name', 'surname', 'date_of_birth', 'place_of_birth', 'link', 'contributor'];
+export const familyColumns = ['husband_name', 'husband_surname', 'wife_name', 'wife_surname', 'children', 'date_of_marriage', 'place_of_marriage', 'link', 'contributor'];
+export const deathColumns = ['name', 'surname', 'date_of_death', 'place_of_death', 'link', 'contributor'];
 
 // Columns excluded from the search form (display-only in results table)
 export const DISPLAY_ONLY_COLUMNS = new Set(['link']);

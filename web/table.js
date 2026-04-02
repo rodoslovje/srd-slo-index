@@ -1,5 +1,48 @@
 import { t } from './i18n.js';
 
+function exportToCSV(data, columns, filename) {
+  if (!data || !data.length) return;
+  const headers = columns.map(col => `"${t('col_' + col).replace(/"/g, '""')}"`).join(',');
+  const rows = data.map(row => {
+    return columns.map(col => {
+      let val = row[col] != null ? row[col] : '';
+      val = String(val).replace(/"/g, '""');
+      return `"${val}"`;
+    }).join(',');
+  });
+
+  const siteTitle = t('site_title').replace(/"/g, '""');
+  const siteUrl = window.location.origin;
+  const dateStr = new Date().toLocaleString();
+  let csvContent = [headers, ...rows].join('\n') + `\n\n"${siteTitle}","${siteUrl}","${dateStr}"`;
+
+  if (filename.includes('contributors')) {
+    const births = data.reduce((s, r) => s + (r.total_births || 0), 0);
+    const families = data.reduce((s, r) => s + (r.total_families || 0), 0);
+    const deaths = data.reduce((s, r) => s + (r.total_deaths || 0), 0);
+    const links = data.reduce((s, r) => s + (r.total_links || 0), 0);
+    const total = births + families + deaths;
+    const lastUpdate = data.reduce((max, r) => (r.last_modified && r.last_modified > max) ? r.last_modified : max, '');
+
+    csvContent += `\n\n"${t('tab_contributors')}","${data.length}"`;
+    csvContent += `\n"${t('col_total_births')}","${births}"`;
+    csvContent += `\n"${t('col_total_families')}","${families}"`;
+    csvContent += `\n"${t('col_total_deaths')}","${deaths}"`;
+    csvContent += `\n"${t('col_total')}","${total}"`;
+    csvContent += `\n"${t('col_total_links')}","${links}"`;
+    csvContent += `\n"${t('col_last_update')}","${lastUpdate}"`;
+  }
+
+  const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', filename);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
 export function parseDateForSort(dateStr) {
   if (!dateStr) return 0;
   let str = String(dateStr).toLowerCase();
@@ -65,8 +108,15 @@ function sortData(data, primary, secondary) {
 
 export function renderTable(data, containerId, columns, defaultSortColumn = null, defaultSortAscending = true, defaultSecondarySortColumn = null) {
   const container = document.getElementById(containerId);
+  const headerEl = container.previousElementSibling;
+  const isHeaderValid = headerEl && (headerEl.tagName === 'H2' || headerEl.classList.contains('totals-bar'));
+
   if (data.length === 0) {
     container.innerHTML = `<p>${t('no_results')}</p>`;
+    if (isHeaderValid) {
+      let btn = headerEl.querySelector('.export-btn');
+      if (btn) btn.remove();
+    }
     return;
   }
 
@@ -124,6 +174,23 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
   });
   html += '</tbody></table>';
   container.innerHTML = html;
+
+  if (isHeaderValid) {
+    let btn = headerEl.querySelector('.export-btn');
+    if (btn) btn.remove();
+
+    btn = document.createElement('button');
+    btn.className = 'export-btn';
+    btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>CSV`;
+    btn.title = t('download_csv'); // Keeps the tooltip translation for accessibility
+    btn.addEventListener('click', () => exportToCSV(data, columns, `sgi-${containerId.replace('table-', '')}.csv`));
+
+    if (headerEl.classList.contains('totals-bar')) {
+      headerEl.appendChild(btn);
+    } else {
+      headerEl.insertBefore(btn, headerEl.firstChild);
+    }
+  }
 
   container.querySelectorAll('th.sortable').forEach(th => {
     th.addEventListener('click', () => {

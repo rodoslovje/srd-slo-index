@@ -84,6 +84,29 @@ button {
 
 button:hover { opacity: 0.9; }
 
+.export-btn {
+  display: inline-flex;
+  align-items: center;
+  background: white;
+  color: #333;
+  border: 1px solid var(--border);
+  padding: 4px 10px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  font-family: system-ui, -apple-system, sans-serif;
+  border-radius: 4px;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+.export-btn:hover { background: #f0f0f0; }
+h2 .export-btn {
+  float: right;
+  margin-top: -2px;
+}
+.totals-bar .export-btn {
+  margin-left: auto;
+}
+
 .table-responsive { overflow-x: auto; margin-bottom: 2rem; }
 table { width: 100%; border-collapse: collapse; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
 th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.95rem; }

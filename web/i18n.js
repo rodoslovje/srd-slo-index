@@ -16,6 +16,7 @@ const translations = {
     exact_search: 'Exact',
     has_link: 'With link',
     date_to: 'to Year',
+    download_csv: 'Download CSV',
 
     // Result section headings
     results_births: 'Birth',
@@ -83,6 +84,7 @@ const translations = {
     exact_search: 'Točno',
     has_link: 'S povezavo',
     date_to: 'do leta',
+    download_csv: 'Prenesi CSV',
 
     // Result section headings
     results_births: 'Rojstvo',
