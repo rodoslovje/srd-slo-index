@@ -96,9 +96,7 @@ export function setupGeneralSearch() {
     if (lastGeneralResults) {
       renderTable(lastGeneralResults.births || [], 'table-general-births', birthColumns, 'surname', true, 'name');
       renderTable(lastGeneralResults.families || [], 'table-general-families', familyColumns, 'husband_surname', true, 'husband_name');
-      if (document.getElementById('table-general-deaths')) {
-        renderTable(lastGeneralResults.deaths || [], 'table-general-deaths', deathColumns, 'surname', true, 'name');
-      }
+      renderTable(lastGeneralResults.deaths || [], 'table-general-deaths', deathColumns, 'surname', true, 'name');
     }
   });
 }
@@ -131,19 +129,10 @@ async function performGeneralSearch() {
   document.getElementById('general-results').style.display = 'block';
   document.getElementById('count-general-births').textContent = '0';
   document.getElementById('count-general-families').textContent = '0';
+  document.getElementById('count-general-deaths').textContent = '0';
   document.getElementById('table-general-births').innerHTML = `<p>${t('searching')}</p>`;
   document.getElementById('table-general-families').innerHTML = `<p>${t('searching')}</p>`;
-
-  let tableDeathsEl = document.getElementById('table-general-deaths');
-  if (!tableDeathsEl) {
-    const genRes = document.getElementById('general-results');
-    if (genRes) {
-      genRes.insertAdjacentHTML('beforeend', `\n    <h2><span data-i18n="results_deaths">${t('results_deaths')}</span> (<span id="count-general-deaths">0</span>)</h2>\n    <div class="table-responsive" id="table-general-deaths"></div>\n  `);
-      tableDeathsEl = document.getElementById('table-general-deaths');
-    }
-  }
-
-  if (tableDeathsEl) tableDeathsEl.innerHTML = `<p>${t('searching')}</p>`;
+  document.getElementById('table-general-deaths').innerHTML = `<p>${t('searching')}</p>`;
 
   try {
     const apiParams = new URLSearchParams({ ...params, limit: '500' });
@@ -153,17 +142,16 @@ async function performGeneralSearch() {
 
     document.getElementById('count-general-births').textContent = results.births?.length || 0;
     document.getElementById('count-general-families').textContent = results.families?.length || 0;
-    const deathsEl = document.getElementById('count-general-deaths');
-    if (deathsEl) deathsEl.textContent = results.deaths?.length || 0;
+    document.getElementById('count-general-deaths').textContent = results.deaths?.length || 0;
 
     renderTable(results.births || [], 'table-general-births', birthColumns, 'surname', true, 'name');
     renderTable(results.families || [], 'table-general-families', familyColumns, 'husband_surname', true, 'husband_name');
-    if (tableDeathsEl) renderTable(results.deaths || [], 'table-general-deaths', deathColumns, 'surname', true, 'name');
+    renderTable(results.deaths || [], 'table-general-deaths', deathColumns, 'surname', true, 'name');
   } catch (error) {
     console.error('Search failed:', error);
     document.getElementById('table-general-births').innerHTML = `<p>${t('search_failed')}</p>`;
     document.getElementById('table-general-families').innerHTML = `<p>${t('search_failed')}</p>`;
-    if (tableDeathsEl) tableDeathsEl.innerHTML = `<p>${t('search_failed')}</p>`;
+    document.getElementById('table-general-deaths').innerHTML = `<p>${t('search_failed')}</p>`;
   }
 }
 
