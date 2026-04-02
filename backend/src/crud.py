@@ -1,10 +1,21 @@
 import re
+import time
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_, and_, text, cast, Text, Integer
 from . import models
 
+CACHE_TTL = 3600  # Cache duration in seconds (1 hour)
+_contributors_cache = {"data": None, "time": 0}
+_timeline_cache = {"data": None, "time": 0}
+
 
 def get_contributors(db: Session):
+    now = time.time()
+    if _contributors_cache["data"] is not None and (
+        now - _contributors_cache["time"] < CACHE_TTL
+    ):
+        return _contributors_cache["data"]
+
     births_counts = dict(
         db.query(models.Birth.contributor, func.count(models.Birth.id))
         .group_by(models.Birth.contributor)
@@ -38,7 +49,7 @@ def get_contributors(db: Session):
         .group_by(models.Death.contributor)
         .all()
     )
-    return [
+    result = [
         {
             "name": c.name,
             "last_modified": c.last_modified,
@@ -51,10 +62,19 @@ def get_contributors(db: Session):
         }
         for c in db.query(models.Contributor).all()
     ]
+    _contributors_cache["data"] = result
+    _contributors_cache["time"] = now
+    return result
 
 
 def get_timeline_distribution(db: Session):
     """Extracts 4-digit years from births, marriages, and deaths for the timeline."""
+    now = time.time()
+    if _timeline_cache["data"] is not None and (
+        now - _timeline_cache["time"] < CACHE_TTL
+    ):
+        return _timeline_cache["data"]
+
     birth_year = cast(func.substring(models.Birth.date_of_birth, r"\d{4}"), Integer)
     births = (
         db.query(birth_year.label("year"), func.count(models.Birth.id))
@@ -96,7 +116,10 @@ def get_timeline_distribution(db: Session):
                 y, {"year": y, "births": 0, "marriages": 0, "deaths": 0}
             )["deaths"] = c
 
-    return list(timeline.values())
+    result = list(timeline.values())
+    _timeline_cache["data"] = result
+    _timeline_cache["time"] = now
+    return result
 
 
 def _extract_year(val: str):
