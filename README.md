@@ -23,11 +23,11 @@ Before importing data into the database, extract the JSON records from your raw 
    ```bash
    python -m venv .venv
    source .venv/bin/activate
-   pip install -r scripts/requirements.txt
+   pip install -r tools/requirements.txt
    ```
 3. Run the extraction script:
    ```bash
-   python scripts/gedcom-to-json.py
+   python tools/gedcom-to-json.py
    ```
    _This will parse the GEDCOM files and output JSON datasets alongside a `metadata.json` file in the `data/` directory._
 
@@ -50,7 +50,7 @@ The database and API backend are containerized and run together on a custom Dock
 Once the API and DB containers are running, populate the database with the extracted JSON files. Execute the import script _inside_ the running API container:
 
 ```bash
-docker compose exec api python scripts/import_to_db.py
+docker compose exec api python tools/import_to_db.py --mode update
 ```
 
 You can preview the built application locally with:
@@ -64,5 +64,5 @@ yarn preview
 If you make changes to the backend code (e.g., in backend/), you need to rebuild the Docker image and restart the container to apply those changes. Run the following command from the project root:
 
 ```bash
-docker compose up -d --build
+docker compose up -d --build api
 ```
