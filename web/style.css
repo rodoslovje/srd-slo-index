@@ -574,6 +574,19 @@ h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 
   color: #999;
 }
 
+/* --- Chart Wrapper --- */
+.chart-wrapper {
+  width: 100%;
+  max-width: 650px;
+  height: 320px;
+  margin: 1.5rem auto 2.5rem;
+}
+@media (max-width: 600px) {
+  .chart-wrapper {
+    height: 380px; /* More height for bottom legend on mobile */
+  }
+}
+
 /* --- Mobile Responsiveness --- */
 @media (max-width: 768px) {
   .header-nav {

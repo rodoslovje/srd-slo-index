@@ -8,6 +8,7 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/srd-favicon-192x192.png" />
     <link rel="apple-touch-icon" href="/srd-favicon-192x192.png" />
     <link rel="stylesheet" href="/style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   </head>
   <body>
     <div id="search-overlay" class="search-overlay" style="display: none;">
@@ -96,6 +97,9 @@
               <span><span data-i18n="col_total">Total</span>: <strong id="total-all">…</strong></span>
               <span><span data-i18n="col_total_links">Links</span>: <strong id="total-links">…</strong></span>
               <span><span data-i18n="col_last_update">Last update</span>: <strong id="total-last-update">…</strong></span>
+            </div>
+            <div class="chart-wrapper" id="chart-wrapper" style="display:none;">
+              <canvas id="contributorsChart"></canvas>
             </div>
             <div class="table-responsive" id="table-contributors"></div>
           </section>

@@ -5,6 +5,7 @@ import { API_BASE_URL } from './config.js';
 const contributorColumns = ['contributor_ID', 'total_births', 'total_families', 'total_deaths', 'total', 'total_links', 'last_modified'];
 let cachedData = null;
 let fetchPromise = null;
+let chartInstance = null;
 
 function ensureData() {
   if (cachedData) return Promise.resolve(cachedData);
@@ -61,15 +62,80 @@ export async function renderContributors() {
 
   try {
     const data = await ensureData();
+    renderChart(data);
     renderTable(data, 'table-contributors', contributorColumns, 'total', false);
   } catch {
     container.innerHTML = `<p>${t('contributors_failed')}</p>`;
   }
 }
 
+function renderChart(data) {
+  if (!window.Chart) return;
+
+  const wrapper = document.getElementById('chart-wrapper');
+  if (wrapper) wrapper.style.display = 'block';
+
+  const ctx = document.getElementById('contributorsChart')?.getContext('2d');
+  if (!ctx) return;
+
+  const sorted = [...data].sort((a, b) => b.total - a.total);
+  const top10 = sorted.slice(0, 10);
+  const others = sorted.slice(10);
+  const othersTotal = others.reduce((sum, r) => sum + r.total, 0);
+
+  const labels = top10.map(d => d.contributor_ID);
+  const values = top10.map(d => d.total);
+
+  if (othersTotal > 0) {
+    labels.push(t('chart_others'));
+    values.push(othersTotal);
+  }
+
+  if (chartInstance) {
+    chartInstance.destroy();
+  }
+
+  // Vibrant, accessible colors for the chart slices
+  const bgColors = ['#3498db', '#e74c3c', '#2ecc71', '#f1c40f', '#9b59b6', '#e67e22', '#1abc9c', '#34495e', '#d35400', '#7f8c8d', '#bdc3c7'];
+
+  chartInstance = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: values,
+        backgroundColor: bgColors.slice(0, labels.length),
+        borderWidth: 2,
+        borderColor: '#fff'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: window.innerWidth > 600 ? 'right' : 'bottom',
+          labels: { font: { family: 'system-ui, -apple-system, sans-serif' } }
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              const val = context.parsed;
+              const total = context.dataset.data.reduce((a, b) => a + b, 0);
+              const pct = ((val / total) * 100).toFixed(1);
+              return ` ${context.label}: ${val.toLocaleString()} (${pct}%)`;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
 /** Re-renders the contributors table if it is currently visible (re-translates column headers). */
 export function refreshContributorsIfVisible() {
   if (cachedData && document.getElementById('tab-contributors').classList.contains('active')) {
+    renderChart(cachedData);
     renderTable(cachedData, 'table-contributors', contributorColumns, 'total', false);
   }
 }

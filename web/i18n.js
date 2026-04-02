@@ -18,6 +18,7 @@ const translations = {
     date_to: 'to Year',
     download_csv: 'Download CSV',
     general_search_label: 'General',
+    chart_others: 'Others',
 
     // Result section headings
     results_births: 'Birth',
@@ -88,6 +89,7 @@ const translations = {
     date_to: 'do leta',
     download_csv: 'Prenesi CSV',
     general_search_label: 'Splošno',
+    chart_others: 'Ostali',
 
     // Result section headings
     results_births: 'Rojstvo',
