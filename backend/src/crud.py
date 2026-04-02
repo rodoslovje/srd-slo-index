@@ -94,30 +94,59 @@ def _text_filter(column, value, exact: bool):
 
 
 def search_all(
-    db: Session, query: str, skip: int = 0, limit: int = 100, exact: bool = False
+    db: Session,
+    query: str = None,
+    name: str = None,
+    surname: str = None,
+    date_from: str = None,
+    date_to: str = None,
+    place: str = None,
+    contributor: str = None,
+    has_link: bool = False,
+    skip: int = 0,
+    limit: int = 100,
+    exact: bool = False,
 ):
     db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
     db.execute(text(f"SELECT set_limit({0.3 if not exact else 1.0});"))
     db.commit()
 
-    births = (
-        db.query(models.Birth)
-        .filter(
+    births_q = db.query(models.Birth)
+    if query:
+        births_q = births_q.filter(
             or_(
                 _text_filter(models.Birth.name, query, exact),
                 _text_filter(models.Birth.surname, query, exact),
                 _text_filter(models.Birth.place_of_birth, query, exact),
                 _text_filter(models.Birth.date_of_birth, query, exact),
+                _text_filter(models.Birth.contributor, query, exact),
             )
         )
-        .offset(skip)
-        .limit(limit)
-        .all()
-    )
+    if name:
+        births_q = births_q.filter(_text_filter(models.Birth.name, name, exact))
+    if surname:
+        births_q = births_q.filter(_text_filter(models.Birth.surname, surname, exact))
+    if place:
+        births_q = births_q.filter(
+            _text_filter(models.Birth.place_of_birth, place, exact)
+        )
+    date_cond_b = _date_filter(models.Birth.date_of_birth, date_from, date_to, exact)
+    if date_cond_b is not None:
+        births_q = births_q.filter(date_cond_b)
+    if contributor:
+        births_q = births_q.filter(
+            _text_filter(models.Birth.contributor, contributor, exact)
+        )
+    if has_link:
+        births_q = births_q.filter(
+            models.Birth.link.isnot(None), models.Birth.link != ""
+        )
 
-    families = (
-        db.query(models.Family)
-        .filter(
+    births = births_q.offset(skip).limit(limit).all()
+
+    families_q = db.query(models.Family)
+    if query:
+        families_q = families_q.filter(
             or_(
                 _text_filter(models.Family.husband_name, query, exact),
                 _text_filter(models.Family.husband_surname, query, exact),
@@ -126,14 +155,77 @@ def search_all(
                 _text_filter(models.Family.children, query, exact),
                 _text_filter(models.Family.place_of_marriage, query, exact),
                 _text_filter(models.Family.date_of_marriage, query, exact),
+                _text_filter(models.Family.contributor, query, exact),
             )
         )
-        .offset(skip)
-        .limit(limit)
-        .all()
+    if name:
+        families_q = families_q.filter(
+            or_(
+                _text_filter(models.Family.husband_name, name, exact),
+                _text_filter(models.Family.wife_name, name, exact),
+            )
+        )
+    if surname:
+        families_q = families_q.filter(
+            or_(
+                _text_filter(models.Family.husband_surname, surname, exact),
+                _text_filter(models.Family.wife_surname, surname, exact),
+            )
+        )
+    if place:
+        families_q = families_q.filter(
+            _text_filter(models.Family.place_of_marriage, place, exact)
+        )
+    date_cond_f = _date_filter(
+        models.Family.date_of_marriage, date_from, date_to, exact
     )
+    if date_cond_f is not None:
+        families_q = families_q.filter(date_cond_f)
+    if contributor:
+        families_q = families_q.filter(
+            _text_filter(models.Family.contributor, contributor, exact)
+        )
+    if has_link:
+        families_q = families_q.filter(
+            models.Family.link.isnot(None), models.Family.link != ""
+        )
 
-    return {"births": births, "families": families}
+    families = families_q.offset(skip).limit(limit).all()
+
+    deaths_q = db.query(models.Death)
+    if query:
+        deaths_q = deaths_q.filter(
+            or_(
+                _text_filter(models.Death.name, query, exact),
+                _text_filter(models.Death.surname, query, exact),
+                _text_filter(models.Death.place_of_death, query, exact),
+                _text_filter(models.Death.date_of_death, query, exact),
+                _text_filter(models.Death.contributor, query, exact),
+            )
+        )
+    if name:
+        deaths_q = deaths_q.filter(_text_filter(models.Death.name, name, exact))
+    if surname:
+        deaths_q = deaths_q.filter(_text_filter(models.Death.surname, surname, exact))
+    if place:
+        deaths_q = deaths_q.filter(
+            _text_filter(models.Death.place_of_death, place, exact)
+        )
+    date_cond_d = _date_filter(models.Death.date_of_death, date_from, date_to, exact)
+    if date_cond_d is not None:
+        deaths_q = deaths_q.filter(date_cond_d)
+    if contributor:
+        deaths_q = deaths_q.filter(
+            _text_filter(models.Death.contributor, contributor, exact)
+        )
+    if has_link:
+        deaths_q = deaths_q.filter(
+            models.Death.link.isnot(None), models.Death.link != ""
+        )
+
+    deaths = deaths_q.offset(skip).limit(limit).all()
+
+    return {"births": births, "families": families, "deaths": deaths}
 
 
 def search_advanced_births(

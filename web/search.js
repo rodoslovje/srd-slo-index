@@ -10,22 +10,123 @@ const lastAdvResults = { birth: null, family: null, death: null };
 // --- General search ---
 
 export function setupGeneralSearch() {
-  document.getElementById('btn-general-search').addEventListener('click', performGeneralSearch);
+  const queryInput = document.getElementById('general-query');
+  const container = document.getElementById('general-search-controls') || (queryInput ? queryInput.closest('.search-box') : null);
+
+  function renderFields() {
+    if (!container) return;
+    const queryVal = document.getElementById('general-query')?.value || '';
+    const nameVal = document.getElementById('general-name')?.value || '';
+    const surnameVal = document.getElementById('general-surname')?.value || '';
+    const dateFromVal = document.getElementById('general-date_from')?.value || '';
+    const dateToVal = document.getElementById('general-date_to')?.value || '';
+    const placeVal = document.getElementById('general-place')?.value || '';
+    const contributorVal = document.getElementById('general-contributor')?.value || '';
+    const exactChecked = document.getElementById('general-exact')?.checked || false;
+    const hasLinkChecked = document.getElementById('general-has_link')?.checked || false;
+
+    let html = `
+      <div class="input-wrapper">
+        <input type="text" id="general-query" placeholder="${t('search_placeholder')}" value="${queryVal}" />
+        <button type="button" class="clear-btn" style="display:${queryVal ? 'block' : 'none'}">&times;</button>
+      </div>
+      <div class="input-wrapper">
+        <input type="text" id="general-name" placeholder="${t('col_name')}" value="${nameVal}" />
+        <button type="button" class="clear-btn" style="display:${nameVal ? 'block' : 'none'}">&times;</button>
+      </div>
+      <div class="input-wrapper">
+        <input type="text" id="general-surname" placeholder="${t('col_surname')}" value="${surnameVal}" />
+        <button type="button" class="clear-btn" style="display:${surnameVal ? 'block' : 'none'}">&times;</button>
+      </div>
+      <div class="date-range">
+        <div class="input-wrapper">
+          <input type="text" id="general-date_from" placeholder="${t('col_date')}" value="${dateFromVal}" />
+          <button type="button" class="clear-btn" style="display:${dateFromVal ? 'block' : 'none'}">&times;</button>
+        </div>
+        <div class="input-wrapper">
+          <input type="text" id="general-date_to" placeholder="${t('date_to')}" value="${dateToVal}" />
+          <button type="button" class="clear-btn" style="display:${dateToVal ? 'block' : 'none'}">&times;</button>
+        </div>
+      </div>
+      <div class="input-wrapper">
+        <input type="text" id="general-place" placeholder="${t('col_place')}" value="${placeVal}" />
+        <button type="button" class="clear-btn" style="display:${placeVal ? 'block' : 'none'}">&times;</button>
+      </div>
+      <div class="input-wrapper">
+        <input type="text" id="general-contributor" placeholder="${t('col_contributor')}" value="${contributorVal}" />
+        <button type="button" class="clear-btn" style="display:${contributorVal ? 'block' : 'none'}">&times;</button>
+      </div>
+      <label class="exact-toggle">
+        <input type="checkbox" id="general-has_link"${hasLinkChecked ? ' checked' : ''} />
+        <span>${t('has_link')}</span>
+      </label>
+      <label class="exact-toggle">
+        <input type="checkbox" id="general-exact"${exactChecked ? ' checked' : ''} />
+        <span>${t('exact_search')}</span>
+      </label>
+      <button id="btn-general-search">${t('search_btn')}</button>
+    `;
+    container.innerHTML = html;
+  }
+
+  if (container) {
+    renderFields();
+    container.addEventListener('click', (event) => {
+      if (event.target.matches('#btn-general-search')) performGeneralSearch();
+      if (event.target.matches('.clear-btn')) {
+        const input = event.target.previousElementSibling;
+        if (input) { input.value = ''; event.target.style.display = 'none'; input.focus(); }
+      }
+    });
+    container.addEventListener('input', (event) => {
+      if (event.target.matches('input[type="text"]')) {
+        const clearBtn = event.target.nextElementSibling;
+        if (clearBtn?.matches('.clear-btn')) clearBtn.style.display = event.target.value ? 'block' : 'none';
+      }
+    });
+    container.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' && event.target.matches('input[type="text"]')) performGeneralSearch();
+    });
+  } else {
+    document.getElementById('btn-general-search')?.addEventListener('click', performGeneralSearch);
+  }
 
   onLanguageChange(() => {
+    if (container) renderFields();
     if (lastGeneralResults) {
-      renderTable(lastGeneralResults.births, 'table-general-births', birthColumns, 'surname', true, 'name');
-      renderTable(lastGeneralResults.families, 'table-general-families', familyColumns, 'husband_surname', true, 'husband_name');
+      renderTable(lastGeneralResults.births || [], 'table-general-births', birthColumns, 'surname', true, 'name');
+      renderTable(lastGeneralResults.families || [], 'table-general-families', familyColumns, 'husband_surname', true, 'husband_name');
+      if (document.getElementById('table-general-deaths')) {
+        renderTable(lastGeneralResults.deaths || [], 'table-general-deaths', deathColumns, 'surname', true, 'name');
+      }
     }
   });
 }
 
 async function performGeneralSearch() {
-  const query = document.getElementById('general-query').value.trim();
-  if (!query) return;
+  const params = {};
+  const fields = ['query', 'name', 'surname', 'date_from', 'date_to', 'place', 'contributor'];
+  fields.forEach(f => {
+    const val = document.getElementById(`general-${f}`)?.value.trim();
+    if (val) params[f === 'query' ? 'q' : f] = val;
+  });
+
+  const hasTextParam = ['q', 'name', 'surname', 'date_from', 'date_to', 'place', 'contributor'].some(k => params[k]);
+  if (!hasTextParam) return;
 
   const exact = document.getElementById('general-exact')?.checked || false;
-  updateURL({ q: query, ...(exact ? { ex: '1' } : {}) });
+  if (exact) params.exact = 'true';
+
+  const hasLink = document.getElementById('general-has_link')?.checked || false;
+  if (hasLink) params.has_link = 'true';
+
+  const urlParams = { ...params };
+  if (params.exact) urlParams.ex = '1';
+  if (params.has_link) urlParams.hl = '1';
+  delete urlParams.exact;
+  delete urlParams.has_link;
+
+  updateURL(urlParams);
   hideIntro('intro-general');
   document.getElementById('general-results').style.display = 'block';
   document.getElementById('count-general-births').textContent = '0';
@@ -33,19 +134,36 @@ async function performGeneralSearch() {
   document.getElementById('table-general-births').innerHTML = `<p>${t('searching')}</p>`;
   document.getElementById('table-general-families').innerHTML = `<p>${t('searching')}</p>`;
 
+  let tableDeathsEl = document.getElementById('table-general-deaths');
+  if (!tableDeathsEl) {
+    const genRes = document.getElementById('general-results');
+    if (genRes) {
+      genRes.insertAdjacentHTML('beforeend', `\n    <h2><span data-i18n="results_deaths">${t('results_deaths')}</span> (<span id="count-general-deaths">0</span>)</h2>\n    <div class="table-responsive" id="table-general-deaths"></div>\n  `);
+      tableDeathsEl = document.getElementById('table-general-deaths');
+    }
+  }
+
+  if (tableDeathsEl) tableDeathsEl.innerHTML = `<p>${t('searching')}</p>`;
+
   try {
-    const params = new URLSearchParams({ q: query, limit: '500', ...(exact ? { exact: 'true' } : {}) });
-    const response = await fetch(`${API_BASE_URL}/api/search/general?${params}`);
+    const apiParams = new URLSearchParams({ ...params, limit: '500' });
+    const response = await fetch(`${API_BASE_URL}/api/search/general?${apiParams}`);
     const results = await response.json();
     lastGeneralResults = results;
 
-    document.getElementById('count-general-births').textContent = results.births.length;
-    document.getElementById('count-general-families').textContent = results.families.length;
-    renderTable(results.births, 'table-general-births', birthColumns, 'surname', true, 'name');
-    renderTable(results.families, 'table-general-families', familyColumns, 'husband_surname', true, 'husband_name');
+    document.getElementById('count-general-births').textContent = results.births?.length || 0;
+    document.getElementById('count-general-families').textContent = results.families?.length || 0;
+    const deathsEl = document.getElementById('count-general-deaths');
+    if (deathsEl) deathsEl.textContent = results.deaths?.length || 0;
+
+    renderTable(results.births || [], 'table-general-births', birthColumns, 'surname', true, 'name');
+    renderTable(results.families || [], 'table-general-families', familyColumns, 'husband_surname', true, 'husband_name');
+    if (tableDeathsEl) renderTable(results.deaths || [], 'table-general-deaths', deathColumns, 'surname', true, 'name');
   } catch (error) {
     console.error('Search failed:', error);
-    document.getElementById('general-results').innerHTML = `<p>${t('search_failed')}</p>`;
+    document.getElementById('table-general-births').innerHTML = `<p>${t('search_failed')}</p>`;
+    document.getElementById('table-general-families').innerHTML = `<p>${t('search_failed')}</p>`;
+    if (tableDeathsEl) tableDeathsEl.innerHTML = `<p>${t('search_failed')}</p>`;
   }
 }
 
@@ -220,13 +338,30 @@ export function restoreFromURL() {
   const q = params.get('q');
   const tParam = params.get('t');
 
-  if (q) {
-    document.getElementById('general-query').value = q;
+  const hasGenParam = ['q', 'name', 'surname', 'date_from', 'date_to', 'place', 'contributor'].some(k => params.has(k) || params.has(PARAM_MAP[k] || k));
+  if (!tParam && hasGenParam) {
+    const fields = ['query', 'name', 'surname', 'date_from', 'date_to', 'place', 'contributor'];
+    fields.forEach(f => {
+      const paramKey = f === 'query' ? 'q' : f;
+      const val = params.get(paramKey) || params.get(PARAM_MAP[paramKey] || paramKey);
+      if (val) {
+        const input = document.getElementById(`general-${f}`);
+        if (input) {
+          input.value = val;
+          const clearBtn = input.nextElementSibling;
+          if (clearBtn?.matches('.clear-btn')) clearBtn.style.display = 'block';
+        }
+      }
+    });
     if (params.get('ex') === '1') {
       const cb = document.getElementById('general-exact');
       if (cb) cb.checked = true;
     }
-    document.getElementById('btn-general-search').click();
+    if (params.get('hl') === '1') {
+      const cb = document.getElementById('general-has_link');
+      if (cb) cb.checked = true;
+    }
+    document.getElementById('btn-general-search')?.click();
   } else if (tParam === 'birth' || tParam === 'family' || tParam === 'death') {
     const columns = tParam === 'birth' ? birthColumns : tParam === 'family' ? familyColumns : deathColumns;
     const prefix = `adv-${tParam}-`;

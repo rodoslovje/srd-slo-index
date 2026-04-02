@@ -41,13 +41,32 @@ def read_contributors(db: Session = Depends(get_db)):
 @app.get("/api/search/general")
 def search_general(
     q: Optional[str] = None,
+    name: Optional[str] = None,
+    surname: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    place: Optional[str] = None,
+    contributor: Optional[str] = None,
+    has_link: bool = False,
     limit: int = 500,
     exact: bool = False,
     db: Session = Depends(get_db),
 ):
-    if not q:
-        return {"births": [], "families": []}
-    return crud.search_all(db, query=q, limit=limit, exact=exact)
+    if not any([q, name, surname, date_from, date_to, place, contributor]):
+        return {"births": [], "families": [], "deaths": []}
+    return crud.search_all(
+        db,
+        query=q,
+        name=name,
+        surname=surname,
+        date_from=date_from,
+        date_to=date_to,
+        place=place,
+        contributor=contributor,
+        has_link=has_link,
+        limit=limit,
+        exact=exact,
+    )
 
 
 @app.get("/api/search/advanced/births", response_model=List[schemas.Birth])

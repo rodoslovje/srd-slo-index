@@ -35,6 +35,8 @@ const translations = {
     // Table column headers
     col_name: 'Name',
     col_surname: 'Surname',
+    col_date: 'Date',
+    col_place: 'Place',
     col_date_of_birth: 'Date of Birth',
     col_place_of_birth: 'Place of Birth',
     col_contributor: 'Contributor',
@@ -100,6 +102,8 @@ const translations = {
     // Table column headers
     col_name: 'Ime',
     col_surname: 'Priimek',
+    col_date: 'Datum',
+    col_place: 'Kraj',
     col_date_of_birth: 'Datum rojstva',
     col_place_of_birth: 'Kraj rojstva',
     col_contributor: 'Dajalec',
