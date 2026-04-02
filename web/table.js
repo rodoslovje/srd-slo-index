@@ -1,4 +1,5 @@
 import { t } from './i18n.js';
+import { PARAM_MAP_REVERSE } from './url.js';
 
 function exportToCSV(data, columns, filename) {
   if (!data || !data.length) return;
@@ -14,7 +15,7 @@ function exportToCSV(data, columns, filename) {
   const siteTitle = t('site_title').replace(/"/g, '""');
   const siteUrl = window.location.origin;
   const dateStr = new Date().toLocaleString();
-  let csvContent = [headers, ...rows].join('\n') + `\n\n"${siteTitle}","${siteUrl}","${dateStr}"`;
+  let csvContent = [headers, ...rows].join('\n') + `\n\n"${siteTitle}"\n"${siteUrl}"\n"${dateStr}"`;
 
   if (filename.includes('contributors')) {
     const births = data.reduce((s, r) => s + (r.total_births || 0), 0);
@@ -31,6 +32,42 @@ function exportToCSV(data, columns, filename) {
     csvContent += `\n"${t('col_total')}","${total}"`;
     csvContent += `\n"${t('col_total_links')}","${links}"`;
     csvContent += `\n"${t('col_last_update')}","${lastUpdate}"`;
+  } else {
+    const params = new URLSearchParams(window.location.search);
+    const activeFilters = [];
+
+    for (const [k, v] of params.entries()) {
+      if (k === 't') continue; // Skip the tab indicator
+
+      let field = PARAM_MAP_REVERSE[k] || k;
+      let label = field;
+
+      if (field === 'q') {
+        label = t('general_search_label');
+      } else if (field === 'ex') {
+        label = t('exact_search');
+      } else if (field === 'hl' || field === 'has_link') {
+        label = t('has_link');
+      } else if (field.endsWith('_to')) {
+        const baseField = field.replace('_to', '');
+        const baseLabel = t('col_' + baseField) !== 'col_' + baseField ? t('col_' + baseField) : baseField;
+        label = `${baseLabel} - ${t('date_to')}`;
+      } else {
+        label = t('col_' + field) !== 'col_' + field ? t('col_' + field) : field;
+      }
+
+      let val = v;
+      if ((field === 'ex' || field === 'hl' || field === 'has_link') && v === '1') {
+        val = '✓'; // Output a nice checkmark for boolean toggles
+      }
+
+      activeFilters.push(`"${String(label).replace(/"/g, '""')}","${String(val).replace(/"/g, '""')}"`);
+    }
+
+    if (activeFilters.length > 0) {
+      csvContent += `\n\n"${t('tab_search').replace(/"/g, '""')}"`;
+      csvContent += '\n' + activeFilters.join('\n');
+    }
   }
 
   const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });

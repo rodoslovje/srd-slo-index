@@ -17,6 +17,7 @@ const translations = {
     has_link: 'With link',
     date_to: 'to Year',
     download_csv: 'Download CSV',
+    general_search_label: 'General',
 
     // Result section headings
     results_births: 'Birth',
@@ -85,6 +86,7 @@ const translations = {
     has_link: 'S povezavo',
     date_to: 'do leta',
     download_csv: 'Prenesi CSV',
+    general_search_label: 'Splošno',
 
     // Result section headings
     results_births: 'Rojstvo',
