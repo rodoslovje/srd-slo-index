@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 from pydantic import BaseModel
 
 
@@ -51,6 +51,12 @@ class Death(DeathBase):
 
     class Config:
         from_attributes = True
+
+
+class GeneralSearchResponse(BaseModel):
+    births: List[Birth]
+    families: List[Family]
+    deaths: List[Death]
 
 
 class Contributor(BaseModel):

@@ -38,7 +38,7 @@ def read_contributors(db: Session = Depends(get_db)):
     return crud.get_contributors(db)
 
 
-@app.get("/api/search/general")
+@app.get("/api/search/general", response_model=schemas.GeneralSearchResponse)
 def search_general(
     q: Optional[str] = None,
     name: Optional[str] = None,

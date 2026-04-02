@@ -49,6 +49,8 @@ def setup_full(db):
         CREATE INDEX idx_family_h_surname_trgm ON families USING gist (husband_surname gist_trgm_ops);
         CREATE INDEX idx_family_w_surname_trgm ON families USING gist (wife_surname gist_trgm_ops);
         CREATE INDEX idx_family_children_trgm ON families USING gist (children gist_trgm_ops);
+        CREATE INDEX idx_death_name_trgm ON deaths USING gist (name gist_trgm_ops);
+        CREATE INDEX idx_death_surname_trgm ON deaths USING gist (surname gist_trgm_ops);
     """
         )
     )
@@ -85,6 +87,8 @@ def setup_update(db):
         CREATE INDEX IF NOT EXISTS idx_family_h_surname_trgm ON families USING gist (husband_surname gist_trgm_ops);
         CREATE INDEX IF NOT EXISTS idx_family_w_surname_trgm ON families USING gist (wife_surname gist_trgm_ops);
         CREATE INDEX IF NOT EXISTS idx_family_children_trgm ON families USING gist (children gist_trgm_ops);
+        CREATE INDEX IF NOT EXISTS idx_death_name_trgm ON deaths USING gist (name gist_trgm_ops);
+        CREATE INDEX IF NOT EXISTS idx_death_surname_trgm ON deaths USING gist (surname gist_trgm_ops);
     """
         )
     )
