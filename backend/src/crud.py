@@ -84,12 +84,32 @@ def _date_filter(column, from_val: str = None, to_val: str = None, exact: bool =
     return None
 
 
-def _text_filter(column, value, exact: bool):
+def _text_filter(column, value, exact: bool, phonetic: bool = False):
+    if phonetic:
+        # Calculate phonetic index for each word in the search string
+        words = value.split()
+        conditions = []
+        for word in words:
+            # Match against the phonetic code of the entire column or its individual words (up to 4 words)
+            word_cond = or_(
+                func.dmetaphone(column) == func.dmetaphone(word),
+                func.dmetaphone(func.split_part(column, " ", 1))
+                == func.dmetaphone(word),
+                func.dmetaphone(func.split_part(column, " ", 2))
+                == func.dmetaphone(word),
+                func.dmetaphone(func.split_part(column, " ", 3))
+                == func.dmetaphone(word),
+                func.dmetaphone(func.split_part(column, " ", 4))
+                == func.dmetaphone(word),
+            )
+            conditions.append(word_cond)
+        return and_(*conditions)
     if exact:
         safe_value = re.sub(r"([.*+?^${}()|\[\]\\])", r"\\\1", value)
         return column.op("~*")(
             rf"\y{safe_value}\y"
         )  # case-insensitive word boundary match
+    # The default is fuzzy trigram search combined with substring matching
     return or_(column.op("%")(cast(value, Text)), column.ilike(f"%{value}%"))
 
 
@@ -105,9 +125,11 @@ def search_all(
     has_link: bool = False,
     skip: int = 0,
     limit: int = 100,
+    phonetic: bool = False,
     exact: bool = False,
 ):
     db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
+    db.execute(text("CREATE EXTENSION IF NOT EXISTS fuzzystrmatch;"))
     db.execute(text(f"SELECT set_limit({0.3 if not exact else 1.0});"))
     db.commit()
 
@@ -115,27 +137,31 @@ def search_all(
     if query:
         births_q = births_q.filter(
             or_(
-                _text_filter(models.Birth.name, query, exact),
-                _text_filter(models.Birth.surname, query, exact),
-                _text_filter(models.Birth.place_of_birth, query, exact),
-                _text_filter(models.Birth.date_of_birth, query, exact),
-                _text_filter(models.Birth.contributor, query, exact),
+                _text_filter(models.Birth.name, query, exact, phonetic),
+                _text_filter(models.Birth.surname, query, exact, phonetic),
+                _text_filter(models.Birth.place_of_birth, query, exact, False),
+                _text_filter(models.Birth.date_of_birth, query, exact, False),
+                _text_filter(models.Birth.contributor, query, exact, False),
             )
         )
     if name:
-        births_q = births_q.filter(_text_filter(models.Birth.name, name, exact))
+        births_q = births_q.filter(
+            _text_filter(models.Birth.name, name, exact, phonetic)
+        )
     if surname:
-        births_q = births_q.filter(_text_filter(models.Birth.surname, surname, exact))
+        births_q = births_q.filter(
+            _text_filter(models.Birth.surname, surname, exact, phonetic)
+        )
     if place:
         births_q = births_q.filter(
-            _text_filter(models.Birth.place_of_birth, place, exact)
+            _text_filter(models.Birth.place_of_birth, place, exact, False)
         )
     date_cond_b = _date_filter(models.Birth.date_of_birth, date_from, date_to, exact)
     if date_cond_b is not None:
         births_q = births_q.filter(date_cond_b)
     if contributor:
         births_q = births_q.filter(
-            _text_filter(models.Birth.contributor, contributor, exact)
+            _text_filter(models.Birth.contributor, contributor, exact, False)
         )
     if has_link:
         births_q = births_q.filter(
@@ -148,33 +174,33 @@ def search_all(
     if query:
         families_q = families_q.filter(
             or_(
-                _text_filter(models.Family.husband_name, query, exact),
-                _text_filter(models.Family.husband_surname, query, exact),
-                _text_filter(models.Family.wife_name, query, exact),
-                _text_filter(models.Family.wife_surname, query, exact),
-                _text_filter(models.Family.children, query, exact),
-                _text_filter(models.Family.place_of_marriage, query, exact),
-                _text_filter(models.Family.date_of_marriage, query, exact),
-                _text_filter(models.Family.contributor, query, exact),
+                _text_filter(models.Family.husband_name, query, exact, phonetic),
+                _text_filter(models.Family.husband_surname, query, exact, phonetic),
+                _text_filter(models.Family.wife_name, query, exact, phonetic),
+                _text_filter(models.Family.wife_surname, query, exact, phonetic),
+                _text_filter(models.Family.children, query, exact, False),
+                _text_filter(models.Family.place_of_marriage, query, exact, False),
+                _text_filter(models.Family.date_of_marriage, query, exact, False),
+                _text_filter(models.Family.contributor, query, exact, False),
             )
         )
     if name:
         families_q = families_q.filter(
             or_(
-                _text_filter(models.Family.husband_name, name, exact),
-                _text_filter(models.Family.wife_name, name, exact),
+                _text_filter(models.Family.husband_name, name, exact, phonetic),
+                _text_filter(models.Family.wife_name, name, exact, phonetic),
             )
         )
     if surname:
         families_q = families_q.filter(
             or_(
-                _text_filter(models.Family.husband_surname, surname, exact),
-                _text_filter(models.Family.wife_surname, surname, exact),
+                _text_filter(models.Family.husband_surname, surname, exact, phonetic),
+                _text_filter(models.Family.wife_surname, surname, exact, phonetic),
             )
         )
     if place:
         families_q = families_q.filter(
-            _text_filter(models.Family.place_of_marriage, place, exact)
+            _text_filter(models.Family.place_of_marriage, place, exact, False)
         )
     date_cond_f = _date_filter(
         models.Family.date_of_marriage, date_from, date_to, exact
@@ -183,7 +209,7 @@ def search_all(
         families_q = families_q.filter(date_cond_f)
     if contributor:
         families_q = families_q.filter(
-            _text_filter(models.Family.contributor, contributor, exact)
+            _text_filter(models.Family.contributor, contributor, exact, False)
         )
     if has_link:
         families_q = families_q.filter(
@@ -196,27 +222,31 @@ def search_all(
     if query:
         deaths_q = deaths_q.filter(
             or_(
-                _text_filter(models.Death.name, query, exact),
-                _text_filter(models.Death.surname, query, exact),
-                _text_filter(models.Death.place_of_death, query, exact),
-                _text_filter(models.Death.date_of_death, query, exact),
-                _text_filter(models.Death.contributor, query, exact),
+                _text_filter(models.Death.name, query, exact, phonetic),
+                _text_filter(models.Death.surname, query, exact, phonetic),
+                _text_filter(models.Death.place_of_death, query, exact, False),
+                _text_filter(models.Death.date_of_death, query, exact, False),
+                _text_filter(models.Death.contributor, query, exact, False),
             )
         )
     if name:
-        deaths_q = deaths_q.filter(_text_filter(models.Death.name, name, exact))
+        deaths_q = deaths_q.filter(
+            _text_filter(models.Death.name, name, exact, phonetic)
+        )
     if surname:
-        deaths_q = deaths_q.filter(_text_filter(models.Death.surname, surname, exact))
+        deaths_q = deaths_q.filter(
+            _text_filter(models.Death.surname, surname, exact, phonetic)
+        )
     if place:
         deaths_q = deaths_q.filter(
-            _text_filter(models.Death.place_of_death, place, exact)
+            _text_filter(models.Death.place_of_death, place, exact, False)
         )
     date_cond_d = _date_filter(models.Death.date_of_death, date_from, date_to, exact)
     if date_cond_d is not None:
         deaths_q = deaths_q.filter(date_cond_d)
     if contributor:
         deaths_q = deaths_q.filter(
-            _text_filter(models.Death.contributor, contributor, exact)
+            _text_filter(models.Death.contributor, contributor, exact, False)
         )
     if has_link:
         deaths_q = deaths_q.filter(
@@ -239,21 +269,25 @@ def search_advanced_births(
     has_link: bool = False,
     skip: int = 0,
     limit: int = 100,
+    phonetic: bool = False,
     exact: bool = False,
 ):
     db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
+    db.execute(text("CREATE EXTENSION IF NOT EXISTS fuzzystrmatch;"))
     db.execute(text(f"SELECT set_limit({0.3 if not exact else 1.0});"))
     db.commit()
 
     query = db.query(models.Birth)
 
     if name:
-        query = query.filter(_text_filter(models.Birth.name, name, exact))
+        query = query.filter(_text_filter(models.Birth.name, name, exact, phonetic))
     if surname:
-        query = query.filter(_text_filter(models.Birth.surname, surname, exact))
+        query = query.filter(
+            _text_filter(models.Birth.surname, surname, exact, phonetic)
+        )
     if place_of_birth:
         query = query.filter(
-            _text_filter(models.Birth.place_of_birth, place_of_birth, exact)
+            _text_filter(models.Birth.place_of_birth, place_of_birth, exact, False)
         )
     date_cond = _date_filter(
         models.Birth.date_of_birth, date_of_birth, date_of_birth_to, exact
@@ -261,7 +295,9 @@ def search_advanced_births(
     if date_cond is not None:
         query = query.filter(date_cond)
     if contributor:
-        query = query.filter(_text_filter(models.Birth.contributor, contributor, exact))
+        query = query.filter(
+            _text_filter(models.Birth.contributor, contributor, exact, False)
+        )
     if has_link:
         query = query.filter(models.Birth.link.isnot(None), models.Birth.link != "")
 
@@ -282,9 +318,11 @@ def search_advanced_families(
     has_link: bool = False,
     skip: int = 0,
     limit: int = 100,
+    phonetic: bool = False,
     exact: bool = False,
 ):
     db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
+    db.execute(text("CREATE EXTENSION IF NOT EXISTS fuzzystrmatch;"))
     db.execute(text(f"SELECT set_limit({0.3 if not exact else 1.0});"))
     db.commit()
 
@@ -292,23 +330,31 @@ def search_advanced_families(
 
     if husband_name:
         query = query.filter(
-            _text_filter(models.Family.husband_name, husband_name, exact)
+            _text_filter(models.Family.husband_name, husband_name, exact, phonetic)
         )
     if husband_surname:
         query = query.filter(
-            _text_filter(models.Family.husband_surname, husband_surname, exact)
+            _text_filter(
+                models.Family.husband_surname, husband_surname, exact, phonetic
+            )
         )
     if wife_name:
-        query = query.filter(_text_filter(models.Family.wife_name, wife_name, exact))
+        query = query.filter(
+            _text_filter(models.Family.wife_name, wife_name, exact, phonetic)
+        )
     if wife_surname:
         query = query.filter(
-            _text_filter(models.Family.wife_surname, wife_surname, exact)
+            _text_filter(models.Family.wife_surname, wife_surname, exact, phonetic)
         )
     if children:
-        query = query.filter(_text_filter(models.Family.children, children, exact))
+        query = query.filter(
+            _text_filter(models.Family.children, children, exact, False)
+        )
     if place_of_marriage:
         query = query.filter(
-            _text_filter(models.Family.place_of_marriage, place_of_marriage, exact)
+            _text_filter(
+                models.Family.place_of_marriage, place_of_marriage, exact, False
+            )
         )
     date_cond = _date_filter(
         models.Family.date_of_marriage, date_of_marriage, date_of_marriage_to, exact
@@ -317,7 +363,7 @@ def search_advanced_families(
         query = query.filter(date_cond)
     if contributor:
         query = query.filter(
-            _text_filter(models.Family.contributor, contributor, exact)
+            _text_filter(models.Family.contributor, contributor, exact, False)
         )
     if has_link:
         query = query.filter(models.Family.link.isnot(None), models.Family.link != "")
@@ -336,21 +382,25 @@ def search_advanced_deaths(
     has_link: bool = False,
     skip: int = 0,
     limit: int = 100,
+    phonetic: bool = False,
     exact: bool = False,
 ):
     db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
+    db.execute(text("CREATE EXTENSION IF NOT EXISTS fuzzystrmatch;"))
     db.execute(text(f"SELECT set_limit({0.3 if not exact else 1.0});"))
     db.commit()
 
     query = db.query(models.Death)
 
     if name:
-        query = query.filter(_text_filter(models.Death.name, name, exact))
+        query = query.filter(_text_filter(models.Death.name, name, exact, phonetic))
     if surname:
-        query = query.filter(_text_filter(models.Death.surname, surname, exact))
+        query = query.filter(
+            _text_filter(models.Death.surname, surname, exact, phonetic)
+        )
     if place_of_death:
         query = query.filter(
-            _text_filter(models.Death.place_of_death, place_of_death, exact)
+            _text_filter(models.Death.place_of_death, place_of_death, exact, False)
         )
     date_cond = _date_filter(
         models.Death.date_of_death, date_of_death, date_of_death_to, exact
@@ -358,7 +408,9 @@ def search_advanced_deaths(
     if date_cond is not None:
         query = query.filter(date_cond)
     if contributor:
-        query = query.filter(_text_filter(models.Death.contributor, contributor, exact))
+        query = query.filter(
+            _text_filter(models.Death.contributor, contributor, exact, False)
+        )
     if has_link:
         query = query.filter(models.Death.link.isnot(None), models.Death.link != "")
 
