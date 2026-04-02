@@ -134,6 +134,9 @@ async function performGeneralSearch() {
   document.getElementById('table-general-families').innerHTML = `<p>${t('searching')}</p>`;
   document.getElementById('table-general-deaths').innerHTML = `<p>${t('searching')}</p>`;
 
+  const overlay = document.getElementById('search-overlay');
+  if (overlay) overlay.style.display = 'flex';
+
   try {
     const apiParams = new URLSearchParams({ ...params, limit: '500' });
     const response = await fetch(`${API_BASE_URL}/api/search/general?${apiParams}`);
@@ -152,6 +155,8 @@ async function performGeneralSearch() {
     document.getElementById('table-general-births').innerHTML = `<p>${t('search_failed')}</p>`;
     document.getElementById('table-general-families').innerHTML = `<p>${t('search_failed')}</p>`;
     document.getElementById('table-general-deaths').innerHTML = `<p>${t('search_failed')}</p>`;
+  } finally {
+    if (overlay) overlay.style.display = 'none';
   }
 }
 
@@ -236,6 +241,9 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
     document.getElementById(tableId).innerHTML = `<p>${t('searching')}</p>`;
     const apiParams = new URLSearchParams({ ...fieldParams, limit: '500', ...(exact ? { exact: 'true' } : {}), ...(hasLink ? { has_link: 'true' } : {}) });
 
+    const overlay = document.getElementById('search-overlay');
+    if (overlay) overlay.style.display = 'flex';
+
     try {
       const response = await fetch(`${API_BASE_URL}/api/search/advanced/${endpoint}?${apiParams}`);
       const results = await response.json();
@@ -245,6 +253,8 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
     } catch (error) {
       console.error('Search failed:', error);
       document.getElementById(tableId).innerHTML = `<p>${t('search_failed')}</p>`;
+    } finally {
+      if (overlay) overlay.style.display = 'none';
     }
   }
 
