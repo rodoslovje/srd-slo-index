@@ -21,6 +21,9 @@ export const PARAM_MAP = {
   date_of_death:        'dod',
   date_of_death_to:     'dodt',
   place_of_death:       'pod',
+  place:            'p',
+  date_from:        'df',
+  date_to:          'dt',
 };
 
 export const PARAM_MAP_REVERSE = Object.fromEntries(

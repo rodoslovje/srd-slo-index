@@ -118,13 +118,16 @@ async function performGeneralSearch() {
   const hasLink = document.getElementById('general-has_link')?.checked || false;
   if (hasLink) params.has_link = 'true';
 
-  const urlParams = { ...params };
-  if (params.exact) urlParams.ex = '1';
-  if (params.has_link) urlParams.hl = '1';
-  delete urlParams.exact;
-  delete urlParams.has_link;
+  const shortParams = {};
+  for (const [key, value] of Object.entries(params)) {
+    if (key === 'exact' || key === 'has_link') continue;
+    const shortKey = PARAM_MAP[key] || key;
+    shortParams[shortKey] = value;
+  }
+  if (exact) shortParams.ex = '1';
+  if (hasLink) shortParams.hl = '1';
 
-  updateURL(urlParams);
+  updateURL(shortParams);
   hideIntro('intro-general');
   document.getElementById('general-results').style.display = 'block';
   document.getElementById('count-general-births').textContent = '0';
@@ -341,7 +344,8 @@ export function restoreFromURL() {
     const fields = ['query', 'name', 'surname', 'date_from', 'date_to', 'place', 'contributor'];
     fields.forEach(f => {
       const paramKey = f === 'query' ? 'q' : f;
-      const val = params.get(paramKey) || params.get(PARAM_MAP[paramKey] || paramKey);
+      const shortKey = PARAM_MAP[paramKey] || paramKey;
+      const val = params.get(shortKey) || params.get(paramKey);
       if (val) {
         const input = document.getElementById(`general-${f}`);
         if (input) {
