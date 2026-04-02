@@ -53,6 +53,21 @@ def get_contributors(db: Session):
     ]
 
 
+def get_birth_years_distribution(db: Session):
+    """Extracts 4-digit years from births and returns their historical distribution."""
+    year_expr = cast(func.substring(models.Birth.date_of_birth, r"\d{4}"), Integer)
+    results = (
+        db.query(year_expr.label("year"), func.count(models.Birth.id))
+        .filter(models.Birth.date_of_birth.op("~")(r"\d{4}"))
+        .group_by("year")
+        .all()
+    )
+    # Return the aggregated years within a historically valid genealogical range
+    return [
+        {"year": r[0], "count": r[1]} for r in results if r[0] and 1500 <= r[0] <= 2025
+    ]
+
+
 def _extract_year(val: str):
     """Extract a 4-digit year from a date string like '15 MAR 1875' or '1875'."""
     m = re.search(r"\d{4}", val)

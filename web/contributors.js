@@ -7,6 +7,10 @@ let cachedData = null;
 let fetchPromise = null;
 let chartInstance = null;
 
+let timelineData = null;
+let timelinePromise = null;
+let timelineChartInstance = null;
+
 function ensureData() {
   if (cachedData) return Promise.resolve(cachedData);
   if (!fetchPromise) {
@@ -28,8 +32,19 @@ function ensureData() {
   return fetchPromise;
 }
 
+function ensureTimelineData() {
+  if (timelineData) return Promise.resolve(timelineData);
+  if (!timelinePromise) {
+    timelinePromise = fetch(`${API_BASE_URL}/api/stats/birth-years`)
+      .then(r => r.json())
+      .then(data => { timelineData = data; return data; });
+  }
+  return timelinePromise;
+}
+
 export function prefetchContributors() {
   ensureData().catch(() => {});
+  ensureTimelineData().catch(() => {});
 }
 
 function setEl(id, value) {
@@ -61,8 +76,13 @@ export async function renderContributors() {
   container.innerHTML = `<p>${t('loading_contributors')}</p>`;
 
   try {
-    const data = await ensureData();
+    const [data, timeline] = await Promise.all([ensureData(), ensureTimelineData()]);
+
+    const chartsContainer = document.getElementById('charts-container');
+    if (chartsContainer) chartsContainer.style.display = 'grid';
+
     renderChart(data);
+    renderTimelineChart(timeline);
     renderTable(data, 'table-contributors', contributorColumns, 'total', false);
   } catch {
     container.innerHTML = `<p>${t('contributors_failed')}</p>`;
@@ -71,9 +91,6 @@ export async function renderContributors() {
 
 function renderChart(data) {
   if (!window.Chart) return;
-
-  const wrapper = document.getElementById('chart-wrapper');
-  if (wrapper) wrapper.style.display = 'block';
 
   const ctx = document.getElementById('contributorsChart')?.getContext('2d');
   if (!ctx) return;
@@ -113,6 +130,12 @@ function renderChart(data) {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
+        title: {
+          display: true,
+          text: t('tab_contributors'),
+          font: { family: 'system-ui, -apple-system, sans-serif', size: 14, weight: '600' },
+          color: '#444'
+        },
         legend: {
           position: window.innerWidth > 600 ? 'right' : 'bottom',
           labels: { font: { family: 'system-ui, -apple-system, sans-serif' } }
@@ -132,10 +155,67 @@ function renderChart(data) {
   });
 }
 
+function renderTimelineChart(data) {
+  if (!window.Chart) return;
+  const ctx = document.getElementById('timelineChart')?.getContext('2d');
+  if (!ctx) return;
+
+  const decades = {};
+  data.forEach(d => {
+    const decade = Math.floor(d.year / 10) * 10;
+    decades[decade] = (decades[decade] || 0) + d.count;
+  });
+
+  // Fill any gaps so the timeline represents a continuous X-axis
+  if (Object.keys(decades).length > 0) {
+    const minDecade = Math.min(...Object.keys(decades).map(Number));
+    const maxDecade = Math.max(...Object.keys(decades).map(Number));
+    for (let i = minDecade; i <= maxDecade; i += 10) {
+      if (decades[i] === undefined) decades[i] = 0;
+    }
+  }
+
+  const labels = Object.keys(decades).sort((a, b) => a - b).map(d => `${d}s`);
+  const values = Object.keys(decades).sort((a, b) => a - b).map(d => decades[d]);
+
+  if (timelineChartInstance) timelineChartInstance.destroy();
+
+  timelineChartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: t('chart_birth_years'),
+        data: values,
+        backgroundColor: '#3498db',
+        borderRadius: 4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        title: {
+          display: true,
+          text: t('chart_birth_years'),
+          font: { family: 'system-ui, -apple-system, sans-serif', size: 14, weight: '600' },
+          color: '#444'
+        },
+        tooltip: {
+          callbacks: { label: (ctx) => ` ${ctx.parsed.y.toLocaleString()} ${t('results_births').toLowerCase()}` }
+        }
+      },
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { grid: { display: false } } }
+    }
+  });
+}
+
 /** Re-renders the contributors table if it is currently visible (re-translates column headers). */
 export function refreshContributorsIfVisible() {
   if (cachedData && document.getElementById('tab-contributors').classList.contains('active')) {
     renderChart(cachedData);
+    if (timelineData) renderTimelineChart(timelineData);
     renderTable(cachedData, 'table-contributors', contributorColumns, 'total', false);
   }
 }

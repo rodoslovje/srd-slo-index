@@ -574,12 +574,21 @@ h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 
   color: #999;
 }
 
-/* --- Chart Wrapper --- */
+/* --- Charts --- */
+.charts-container {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+  margin: 1.5rem 0 2.5rem;
+}
+@media (min-width: 900px) {
+  .charts-container {
+    grid-template-columns: 1fr 1.5fr;
+  }
+}
 .chart-wrapper {
   width: 100%;
-  max-width: 650px;
   height: 320px;
-  margin: 1.5rem auto 2.5rem;
 }
 @media (max-width: 600px) {
   .chart-wrapper {

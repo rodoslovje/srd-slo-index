@@ -98,8 +98,13 @@
               <span><span data-i18n="col_total_links">Links</span>: <strong id="total-links">…</strong></span>
               <span><span data-i18n="col_last_update">Last update</span>: <strong id="total-last-update">…</strong></span>
             </div>
-            <div class="chart-wrapper" id="chart-wrapper" style="display:none;">
-              <canvas id="contributorsChart"></canvas>
+            <div class="charts-container" id="charts-container" style="display:none;">
+              <div class="chart-wrapper">
+                <canvas id="contributorsChart"></canvas>
+              </div>
+              <div class="chart-wrapper">
+                <canvas id="timelineChart"></canvas>
+              </div>
             </div>
             <div class="table-responsive" id="table-contributors"></div>
           </section>

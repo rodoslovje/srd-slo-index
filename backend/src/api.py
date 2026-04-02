@@ -38,6 +38,11 @@ def read_contributors(db: Session = Depends(get_db)):
     return crud.get_contributors(db)
 
 
+@app.get("/api/stats/birth-years", response_model=List[schemas.YearStat])
+def read_birth_years(db: Session = Depends(get_db)):
+    return crud.get_birth_years_distribution(db)
+
+
 @app.get("/api/search/general", response_model=schemas.GeneralSearchResponse)
 def search_general(
     q: Optional[str] = None,

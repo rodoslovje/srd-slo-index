@@ -59,6 +59,11 @@ class GeneralSearchResponse(BaseModel):
     deaths: List[Death]
 
 
+class YearStat(BaseModel):
+    year: int
+    count: int
+
+
 class Contributor(BaseModel):
     name: str
     last_modified: str
