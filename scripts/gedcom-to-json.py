@@ -626,10 +626,14 @@ def main():
         # Deaths: no limit.
         birth_cutoff = datetime.now().year - 100
 
-        def is_empty_or_private(name, surname):
-            n = name.strip().lower()
-            s = surname.strip().lower()
-            return n in ("", "private") and s in ("", "private")
+        def is_empty(name, surname):
+            return not name.strip() and not surname.strip()
+
+        def is_private_name(name, surname):
+            return (
+                name.strip().lower() == "private"
+                or surname.strip().lower() == "private"
+            )
 
         for family in family_elements:
             marr_date, marr_place, marr_link = get_event_data(
@@ -696,9 +700,14 @@ def main():
                 "_wife_is_deceased": wife.get("is_deceased", False),
             }
 
-            if is_empty_or_private(
+            if is_private_name(
                 record["husband_name"], record["husband_surname"]
-            ) and is_empty_or_private(record["wife_name"], record["wife_surname"]):
+            ) or is_private_name(record["wife_name"], record["wife_surname"]):
+                continue
+
+            if is_empty(record["husband_name"], record["husband_surname"]) and is_empty(
+                record["wife_name"], record["wife_surname"]
+            ):
                 continue
 
             if marr_link:
@@ -723,13 +732,19 @@ def main():
         families_data = [
             r
             for r in families_data
-            if (
-                not is_recent(r["date_of_marriage"], birth_cutoff)
-                and not is_recent(r.get("_husb_birth", ""), birth_cutoff)
-                and not is_recent(r.get("_wife_birth", ""), birth_cutoff)
+            if not (
+                is_recent(r.get("_husb_birth", ""), birth_cutoff)
+                and not r.get("_husb_is_deceased", False)
             )
-            or r.get("_husb_is_deceased", False)
-            or r.get("_wife_is_deceased", False)
+            and not (
+                is_recent(r.get("_wife_birth", ""), birth_cutoff)
+                and not r.get("_wife_is_deceased", False)
+            )
+            and (
+                not is_recent(r["date_of_marriage"], birth_cutoff)
+                or r.get("_husb_is_deceased", False)
+                or r.get("_wife_is_deceased", False)
+            )
         ]
         # Strip internal fields before writing
         for r in births_data:
