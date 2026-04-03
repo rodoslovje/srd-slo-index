@@ -65,7 +65,7 @@ const translations = {
     col_url: 'URL',
 
     // Society name (used in intro logo)
-    society_name: 'Slovenian Genealogical Society',
+    society_name: 'Slovenian Genealogy Society',
 
     // Footer
     footer_version: 'Version',
@@ -149,7 +149,7 @@ const translations = {
 // { text: string (may contain HTML), warning?: true }
 const introData = {
   en: [
-    { text: '<strong>The Slovenian Genealogical Index</strong> is an archival collection of data on births, marriages and deaths in Slovenia, which has been created from the collections of individual genealogists since the very beginning of the society\'s activities. In it, we can search for the names and surnames of the people we are researching to find out if someone else has already discovered and described them. The basic index contains, in addition to personal names, the dates and places of birth and the surname of the data provider, which allows the researcher to make further contact, indicates the direction and often makes it possible to research in an indirectly discovered parish. The contact information of the donors is not published, but it will not be difficult to get to them through the <a href="https://rodoslovje.si" target="_blank" rel="noopener">Slovenian Genealogical Society</a>.' },
+    { text: '<strong>The Slovenian Genealogical Index</strong> is an archival collection of data on births, marriages and deaths in Slovenia, which has been created from the collections of individual genealogists since the very beginning of the society\'s activities. In it, we can search for the names and surnames of the people we are researching to find out if someone else has already discovered and described them. The basic index contains, in addition to personal names, the dates and places of birth and the surname of the data provider, which allows the researcher to make further contact, indicates the direction and often makes it possible to research in an indirectly discovered parish. The contact information of the donors is not published, but it will not be difficult to get to them through the <a href="https://rodoslovje.si" target="_blank" rel="noopener">Slovenian Genealogy Society</a>.' },
     { text: 'On main <strong>"Search"</strong> page, the search engine returns query results from all sections of the collection: births, marriages, and deaths of historical figures in Slovenia.' },
     { text: 'On the <strong>"Birth"</strong> page, the search engine allows for an exact or approximate search in all fields: name, surname, date of birth, place of birth and the surname of the genealogist-provider of this data.' },
     { text: 'On the <strong>"Family"</strong> page, the search engine allows for an exact or approximate search in all fields: husband\'s name, husband\'s surname, wife\'s name, wife\'s maiden name, date and place of marriage, and the provider\'s surname.' },
@@ -157,7 +157,7 @@ const introData = {
     { text: 'The the <strong>"Death"</strong> page, the search engine allows you to search across all fields: first and last name, date and place of death, and the surname of the genealogist who contributed the data.' },
     { text: 'The query results can be sorted by name or surname. For a full view, it is possible to hide the query window. For foreign users of the index, the site is also available in English.' },
     { text: 'The list of surnames, names, dates and places of birth, marriage and death is made from a merged file to which many genealogists, listed on the <a href="?t=contributors">Contributors</a> page, have contributed the results of their work.' },
-    { text: 'Warning! The Slovenian Genealogical Index is for informational purposes only. The Slovenian Genealogical Society disclaims any responsibility for the accuracy of the submitted data. The society is a voluntary association of individuals who are developing a common source of knowledge of data from registers and other written and oral sources. The structure of the society allows anyone who has their own collection of genealogical data to contribute it to the common cumulative collection and index. No individual who has contributed data to the index, nor the Slovenian Genealogical Society, can guarantee the accuracy of the data.', warning: true },
+    { text: 'Warning! The Slovenian Genealogical Index is for informational purposes only. The Slovenian Genealogy Society disclaims any responsibility for the accuracy of the submitted data. The society is a voluntary association of individuals who are developing a common source of knowledge of data from registers and other written and oral sources. The structure of the society allows anyone who has their own collection of genealogical data to contribute it to the common cumulative collection and index. No individual who has contributed data to the index, nor the Slovenian Genealogy Society, can guarantee the accuracy of the data.', warning: true },
     { text: 'If you have your own family tree in the form of a database and would like to join the existing contributors with the results of your work, please <a href="mailto:martin.mali@siol.net">email</a> your GEDCOM file (excluding data on living persons) to the administrator.' },
   ],
   sl: [
