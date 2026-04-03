@@ -120,7 +120,7 @@ const RIGHT_COLUMNS = new Set([
 ]);
 
 function getValue(row, col) {
-  const isGedcomDate = col === 'date_of_birth' || col === 'date_of_marriage';
+  const isGedcomDate = col === 'date_of_birth' || col === 'date_of_marriage' || col === 'date_of_death';
   const isNumeric = ['total_births', 'total_families', 'total_deaths', 'total', 'total_links'].includes(col);
   if (isGedcomDate) return parseDateForSort(row[col]);
   if (isNumeric) return Number(row[col] || 0);
