@@ -176,8 +176,8 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
     } else {
       const header = t(`col_${col}`);
       let indicator = '';
-      if (primary?.column === col) indicator = primary.ascending ? ' ▲' : ' ▼';
-      else if (secondary?.column === col) indicator = secondary.ascending ? ' △' : ' ▽';
+      if (primary?.column === col) indicator = primary.ascending ? '&nbsp;▲' : '&nbsp;▼';
+      else if (secondary?.column === col) indicator = secondary.ascending ? '&nbsp;△' : '&nbsp;▽';
       const cls = CENTERED_COLUMNS.has(col) ? ' class="sortable col-center"' : RIGHT_COLUMNS.has(col) ? ' class="sortable col-right"' : ' class="sortable"';
       html += `<th data-col="${col}"${cls}>${header}${indicator}</th>`;
     }
