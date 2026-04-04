@@ -317,6 +317,21 @@ def main():
         action="store_true",
         help="Drop and recreate all tables from scratch before importing.",
     )
+    parser.add_argument(
+        "--force-families",
+        action="store_true",
+        help="Force re-import of family records for all contributors.",
+    )
+    parser.add_argument(
+        "--force-births",
+        action="store_true",
+        help="Force re-import of birth records for all contributors.",
+    )
+    parser.add_argument(
+        "--force-deaths",
+        action="store_true",
+        help="Force re-import of death records for all contributors.",
+    )
     args = parser.parse_args()
     full_mode = args.mode == "full" or args.drop_tables
 
@@ -403,9 +418,21 @@ def main():
             )
 
             if is_up_to_date:
-                print(
-                    f"\nSkipping contributor {index}/{total_contributors}: {contributor_id} (up to date)"
-                )
+                if args.force_births or args.force_families or args.force_deaths:
+                    do_import = True
+                    if args.force_births:
+                        imp_births = True
+                    if args.force_families:
+                        imp_families = True
+                    if args.force_deaths:
+                        imp_deaths = True
+                    print(
+                        f"\nProcessing contributor {index}/{total_contributors}: {contributor_id} (forced update)"
+                    )
+                else:
+                    print(
+                        f"\nSkipping contributor {index}/{total_contributors}: {contributor_id} (up to date)"
+                    )
             else:
                 do_import = True
                 print(
@@ -427,21 +454,30 @@ def main():
                         )
                     print("  -> Doing full re-import for this contributor.")
                 else:
-                    if db_births_count != meta_births_count:
+                    if db_births_count != meta_births_count or args.force_births:
                         imp_births = True
-                        print(
-                            f"  -> Mismatch in births_count: DB={db_births_count} vs Meta={meta_births_count}"
-                        )
-                    if db_families_count != meta_families_count:
+                        if db_births_count != meta_births_count:
+                            print(
+                                f"  -> Mismatch in births_count: DB={db_births_count} vs Meta={meta_births_count}"
+                            )
+                        else:
+                            print("  -> Forcing births update")
+                    if db_families_count != meta_families_count or args.force_families:
                         imp_families = True
-                        print(
-                            f"  -> Mismatch in families_count: DB={db_families_count} vs Meta={meta_families_count}"
-                        )
-                    if db_deaths_count != meta_deaths_count:
+                        if db_families_count != meta_families_count:
+                            print(
+                                f"  -> Mismatch in families_count: DB={db_families_count} vs Meta={meta_families_count}"
+                            )
+                        else:
+                            print("  -> Forcing families update")
+                    if db_deaths_count != meta_deaths_count or args.force_deaths:
                         imp_deaths = True
-                        print(
-                            f"  -> Mismatch in deaths_count: DB={db_deaths_count} vs Meta={meta_deaths_count}"
-                        )
+                        if db_deaths_count != meta_deaths_count:
+                            print(
+                                f"  -> Mismatch in deaths_count: DB={db_deaths_count} vs Meta={meta_deaths_count}"
+                            )
+                        else:
+                            print("  -> Forcing deaths update")
 
         if do_import:
             import_contributor(
