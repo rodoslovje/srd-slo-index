@@ -218,33 +218,63 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         if (row.surname) params.set('sn', row.surname);
         params.set('ex', '1');
         html += `<td><a href="?${params.toString()}" target="_blank" rel="noopener" class="name-link">${row[col]}</a></td>`;
-      } else if (col === 'children' && row[col]) {
-        const childrenList = row[col].split(', ');
-        const formattedChildren = childrenList.map(c => {
-          if (c === 'private' || c === 'unknown') return c;
+      } else if ((col === 'children' && (row.children_list || row[col])) || ((col === 'husband_parents' || col === 'wife_parents') && row[col])) {
+        let formattedList = [];
+        let count = 0;
 
-          let namePart = c;
-          let yearPart = '';
-          const starIdx = c.lastIndexOf('*');
-          if (starIdx !== -1) {
-            namePart = c.substring(0, starIdx).trim();
-            yearPart = c.substring(starIdx + 1).trim();
+        const jsonStr = col === 'children' ? row.children_list : row[col];
+
+        if (jsonStr) {
+          try {
+            const pList = JSON.parse(jsonStr);
+            count = pList.length;
+            formattedList = pList.map(c => {
+              if (c.name === 'private' || c.name === 'unknown') return c.name;
+
+              const params = new URLSearchParams();
+              params.set('t', 'birth');
+              if (c.name) params.set('n', c.name);
+              if (c.surname) params.set('sn', c.surname);
+              if (c.year) params.set('dob', c.year);
+              params.set('ex', '1');
+
+              const displayStr = c.year ? `${c.name} *${c.year}` : c.name;
+              return `<a href="?${params.toString()}" target="_blank" rel="noopener">${displayStr}</a>`;
+            });
+          } catch (e) {
+            console.error("Failed to parse JSON for " + col, e);
           }
+        }
 
-          const params = new URLSearchParams();
-          params.set('t', 'birth');
-          if (namePart) params.set('n', namePart);
-          const surname = row.husband_surname || row.wife_surname || '';
-          if (surname) params.set('sn', surname);
-          if (yearPart) params.set('dob', yearPart);
-          params.set('ex', '1');
+        if (formattedList.length === 0 && col === 'children' && row[col]) {
+          const childrenList = row[col].split(', ');
+          count = childrenList.length;
+          formattedList = childrenList.map(c => {
+            if (c === 'private' || c === 'unknown') return c;
 
-          return `<a href="?${params.toString()}" target="_blank" rel="noopener">${c}</a>`;
-        });
+            let namePart = c;
+            let yearPart = '';
+            const starIdx = c.lastIndexOf('*');
+            if (starIdx !== -1) {
+              namePart = c.substring(0, starIdx).trim();
+              yearPart = c.substring(starIdx + 1).trim();
+            }
+
+            const params = new URLSearchParams();
+            params.set('t', 'birth');
+            if (namePart) params.set('n', namePart);
+            const surname = row.husband_surname || row.wife_surname || '';
+            if (surname) params.set('sn', surname);
+            if (yearPart) params.set('dob', yearPart);
+            params.set('ex', '1');
+
+            return `<a href="?${params.toString()}" target="_blank" rel="noopener">${c}</a>`;
+          });
+        }
         html += `<td>
           <details class="expandable-cell">
-            <summary>${childrenList.length}</summary>
-            <div class="expanded-content">${formattedChildren.join('<br>')}</div>
+            <summary>${count}</summary>
+            <div class="expanded-content">${formattedList.join('<br>')}</div>
           </details>
         </td>`;
       } else {

@@ -610,6 +610,12 @@ def main():
                     for child in element.get_child_elements()
                 )
 
+                famc_pointers = [
+                    child.get_value()
+                    for child in element.get_child_elements()
+                    if child.get_tag() == "FAMC"
+                ]
+
                 # Store for marriage cross-referencing (include birth_date and is_deceased for privacy filter)
                 individuals_dict[pointer] = {
                     "name": name,
@@ -617,6 +623,7 @@ def main():
                     "birth_date": birth_date,
                     "is_deceased": is_deceased_flag,
                     "marr_link": indi_m_link,
+                    "famc": famc_pointers,
                 }
 
                 if birth_date or birth_place:
@@ -659,6 +666,16 @@ def main():
                 or surname.strip().lower() == "private"
             )
 
+        family_dict = {}
+        for family in family_elements:
+            h_ptr, w_ptr = "", ""
+            for child in family.get_child_elements():
+                if child.get_tag() == "HUSB":
+                    h_ptr = child.get_value()
+                elif child.get_tag() == "WIFE":
+                    w_ptr = child.get_value()
+            family_dict[family.get_pointer()] = {"husb": h_ptr, "wife": w_ptr}
+
         for family in family_elements:
             marr_date, marr_place, marr_link = get_event_data(
                 family, "MARR", sources_dict
@@ -684,7 +701,38 @@ def main():
             if not marr_link:
                 marr_link = husb.get("marr_link", "") or wife.get("marr_link", "")
 
+            def get_parents_list(person_data):
+                parents_list = []
+                if not person_data:
+                    return parents_list
+                for famc_ptr in person_data.get("famc", []):
+                    fam_data = family_dict.get(famc_ptr)
+                    if fam_data:
+                        for p_ptr in (fam_data["husb"], fam_data["wife"]):
+                            if not p_ptr:
+                                continue
+                            p_data = individuals_dict.get(p_ptr)
+                            if p_data:
+                                p_birth_date = p_data.get("birth_date", "")
+                                p_is_deceased = p_data.get("is_deceased", False)
+                                is_private = is_recent(p_birth_date, birth_cutoff) and not p_is_deceased
+                                if is_private:
+                                    parents_list.append({"name": "private", "surname": "", "year": ""})
+                                else:
+                                    p_name = p_data.get("name", "")
+                                    if not p_name:
+                                        p_name = "unknown"
+                                    p_surname = p_data.get("surname", "")
+                                    p_birth_year = extract_year(p_birth_date)
+                                    p_year_str = str(p_birth_year) if p_birth_year else ""
+                                    parents_list.append({"name": p_name, "surname": p_surname, "year": p_year_str})
+                return parents_list
+
+            husband_parents = get_parents_list(husb)
+            wife_parents = get_parents_list(wife)
+
             children_info = []
+            children_list = []
             for child_ptr in child_pointers:
                 child_data = individuals_dict.get(child_ptr)
                 if child_data:
@@ -700,15 +748,27 @@ def main():
 
                     if is_private:
                         children_info.append("private")
+                        children_list.append(
+                            {"name": "private", "surname": "", "year": ""}
+                        )
                     else:
                         child_name = child_data.get("name", "")
                         if not child_name:
                             child_name = "unknown"
+                        child_surname = child_data.get("surname", "")
                         birth_year = extract_year(child_birth_date)
+                        year_str = str(birth_year) if birth_year else ""
                         if birth_year:
                             children_info.append(f"{child_name} *{birth_year}")
                         else:
                             children_info.append(child_name)
+                        children_list.append(
+                            {
+                                "name": child_name,
+                                "surname": child_surname,
+                                "year": year_str,
+                            }
+                        )
             children_string = ", ".join(children_info)
 
             record = {
@@ -738,6 +798,12 @@ def main():
                 record["link"] = marr_link
             if children_string:
                 record["children"] = children_string
+            if children_list:
+                record["children_list"] = children_list
+            if husband_parents:
+                record["husband_parents"] = husband_parents
+            if wife_parents:
+                record["wife_parents"] = wife_parents
 
             families_data.append(record)
 

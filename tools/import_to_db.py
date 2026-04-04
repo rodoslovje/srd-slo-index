@@ -30,7 +30,7 @@ def setup_full(db):
         DROP TABLE IF EXISTS births, families, contributors CASCADE;
 
         CREATE TABLE contributors (
-            id SERIAL PRIMARY KEY,
+            id SERIAL PRIMARY KEY,t
             name VARCHAR(255) UNIQUE NOT NULL,
             last_modified VARCHAR(255),
             births_count INTEGER DEFAULT 0,
@@ -47,7 +47,7 @@ def setup_full(db):
             id SERIAL PRIMARY KEY, name TEXT, surname TEXT, date_of_birth TEXT, place_of_birth TEXT, contributor TEXT, link TEXT
         );
         CREATE TABLE families (
-            id SERIAL PRIMARY KEY, husband_name TEXT, husband_surname TEXT, wife_name TEXT, wife_surname TEXT, children TEXT, date_of_marriage TEXT, place_of_marriage TEXT, contributor TEXT, link TEXT
+            id SERIAL PRIMARY KEY, husband_name TEXT, husband_surname TEXT, wife_name TEXT, wife_surname TEXT, children TEXT, children_list TEXT, husband_parents TEXT, wife_parents TEXT, date_of_marriage TEXT, place_of_marriage TEXT, contributor TEXT, link TEXT
         );
         CREATE TABLE deaths (
             id SERIAL PRIMARY KEY, name TEXT, surname TEXT, date_of_death TEXT, place_of_death TEXT, contributor TEXT, link TEXT
@@ -90,6 +90,10 @@ def setup_update(db):
         ALTER TABLE births ADD COLUMN IF NOT EXISTS link TEXT;
         ALTER TABLE families ADD COLUMN IF NOT EXISTS link TEXT;
         ALTER TABLE families ADD COLUMN IF NOT EXISTS children TEXT;
+        ALTER TABLE families DROP COLUMN IF EXISTS children_json;
+        ALTER TABLE families ADD COLUMN IF NOT EXISTS children_list TEXT;
+        ALTER TABLE families ADD COLUMN IF NOT EXISTS husband_parents TEXT;
+        ALTER TABLE families ADD COLUMN IF NOT EXISTS wife_parents TEXT;
 
         ALTER TABLE contributors ADD COLUMN IF NOT EXISTS births_count INTEGER DEFAULT 0;
         ALTER TABLE contributors ADD COLUMN IF NOT EXISTS families_count INTEGER DEFAULT 0;
@@ -228,12 +232,27 @@ def import_contributor(
                 family["contributor"] = contributor_id
                 family.setdefault("link", None)
                 family.setdefault("children", None)
+                family.setdefault("children_list", None)
+                family.setdefault("husband_parents", None)
+                family.setdefault("wife_parents", None)
+                if isinstance(family.get("children_list"), list):
+                    family["children_list"] = json.dumps(
+                        family["children_list"], ensure_ascii=False
+                    )
+                if isinstance(family.get("husband_parents"), list):
+                    family["husband_parents"] = json.dumps(
+                        family["husband_parents"], ensure_ascii=False
+                    )
+                if isinstance(family.get("wife_parents"), list):
+                    family["wife_parents"] = json.dumps(
+                        family["wife_parents"], ensure_ascii=False
+                    )
                 db.execute(
                     text(
                         "INSERT INTO families (husband_name, husband_surname, wife_name, wife_surname, "
-                        "children, date_of_marriage, place_of_marriage, contributor, link) "
+                        "children, children_list, husband_parents, wife_parents, date_of_marriage, place_of_marriage, contributor, link) "
                         "VALUES (:husband_name, :husband_surname, :wife_name, :wife_surname, "
-                        ":children, :date_of_marriage, :place_of_marriage, :contributor, :link)"
+                        ":children, :children_list, :husband_parents, :wife_parents, :date_of_marriage, :place_of_marriage, :contributor, :link)"
                     ),
                     family,
                 )
