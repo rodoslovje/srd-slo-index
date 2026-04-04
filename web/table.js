@@ -6,7 +6,36 @@ function exportToCSV(data, columns, filename) {
   const headers = columns.map(col => `"${t('col_' + col).replace(/"/g, '""')}"`).join(',');
   const rows = data.map(row => {
     return columns.map(col => {
-      let val = row[col] != null ? row[col] : '';
+      let val = '';
+      if (col === 'parents') {
+        const parseP = (jsonStr, label) => {
+          if (!jsonStr) return '';
+          try {
+            const arr = JSON.parse(jsonStr);
+            if (!arr.length) return '';
+            const f = arr[0] || {}; const m = arr[1] || {};
+            const fStr = `${f.name||''} ${f.surname||''} ${f.year ? '*'+f.year : ''}`.trim();
+            const mStr = `${m.name||''} ${m.surname||''} ${m.year ? '*'+m.year : ''}`.trim();
+            return `${label}: ${fStr}, ${mStr}`.replace(/\s+/g, ' ').trim();
+          } catch(e) { return ''; }
+        };
+        const hp = parseP(row.husband_parents, t('label_husband'));
+        const wp = parseP(row.wife_parents, t('label_wife'));
+        val = [hp, wp].filter(Boolean).join(' | ');
+      } else if (col === 'children' && row.children_list) {
+        try {
+          const arr = JSON.parse(row.children_list);
+          val = arr.map(c => {
+             if (c.name === 'private' || c.name === 'unknown') return c.name;
+             let d = c.name || '';
+             if (c.surname && c.surname !== row.husband_surname) d += ' ' + c.surname;
+             if (c.year) d += ' *' + c.year;
+             return d;
+          }).join(', ');
+        } catch(e) { val = row[col] || ''; }
+      } else {
+        val = row[col] != null ? row[col] : '';
+      }
       val = String(val).replace(/"/g, '""');
       return `"${val}"`;
     }).join(',');
@@ -120,6 +149,7 @@ const RIGHT_COLUMNS = new Set([
 ]);
 
 function getValue(row, col) {
+  if (col === 'parents') return String(row.husband_parents || '') + String(row.wife_parents || '');
   const isGedcomDate = col === 'date_of_birth' || col === 'date_of_marriage' || col === 'date_of_death';
   const isNumeric = ['total_births', 'total_families', 'total_deaths', 'total', 'total_links'].includes(col);
   if (isGedcomDate) return parseDateForSort(row[col]);
@@ -218,15 +248,13 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         if (row.surname) params.set('sn', row.surname);
         params.set('ex', '1');
         html += `<td><a href="?${params.toString()}" target="_blank" rel="noopener" class="name-link">${row[col]}</a></td>`;
-      } else if ((col === 'children' && (row.children_list || row[col])) || ((col === 'husband_parents' || col === 'wife_parents') && row[col])) {
+      } else if (col === 'children' && (row.children_list || row[col])) {
         let formattedList = [];
         let count = 0;
 
-        const jsonStr = col === 'children' ? row.children_list : row[col];
-
-        if (jsonStr) {
+        if (row.children_list) {
           try {
-            const pList = JSON.parse(jsonStr);
+            const pList = JSON.parse(row.children_list);
             count = pList.length;
             formattedList = pList.map(c => {
               if (c.name === 'private' || c.name === 'unknown') return c.name;
@@ -238,15 +266,18 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
               if (c.year) params.set('dob', c.year);
               params.set('ex', '1');
 
-              const displayStr = c.year ? `${c.name} *${c.year}` : c.name;
-              return `<a href="?${params.toString()}" target="_blank" rel="noopener">${displayStr}</a>`;
+              let childDisplay = c.name || '';
+              if (c.surname && c.surname !== row.husband_surname) childDisplay += ` ${c.surname}`;
+              if (c.year) childDisplay += ` *${c.year}`;
+
+              return `<a href="?${params.toString()}" target="_blank" rel="noopener">${childDisplay}</a>`;
             });
           } catch (e) {
-            console.error("Failed to parse JSON for " + col, e);
+            console.error("Failed to parse JSON for children", e);
           }
         }
 
-        if (formattedList.length === 0 && col === 'children' && row[col]) {
+        if (formattedList.length === 0 && row[col]) {
           const childrenList = row[col].split(', ');
           count = childrenList.length;
           formattedList = childrenList.map(c => {
@@ -277,6 +308,71 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
             <div class="expanded-content">${formattedList.join('<br>')}</div>
           </details>
         </td>`;
+      } else if (col === 'parents' && (row.husband_parents || row.wife_parents)) {
+        let parentsCount = 0;
+        const renderParents = (parentsJson, labelKey) => {
+          if (!parentsJson) return '';
+          try {
+            const pList = JSON.parse(parentsJson);
+            if (pList.length === 0) return '';
+
+            const father = pList[0] || {};
+            const mother = pList[1] || {};
+            if (!father.name && !mother.name) return '';
+
+            const fName = father.name === 'private' || father.name === 'unknown' ? father.name : father.name || '';
+            const fSur = father.name === 'private' || father.name === 'unknown' ? '' : father.surname || '';
+            const fYear = father.year ? ` *${father.year}` : '';
+
+            const mName = mother.name === 'private' || mother.name === 'unknown' ? mother.name : mother.name || '';
+            const mSur = mother.name === 'private' || mother.name === 'unknown' ? '' : mother.surname || '';
+            const mYear = mother.year ? ` *${mother.year}` : '';
+
+            const famParams = new URLSearchParams();
+            famParams.set('t', 'family');
+            if (fName && fName !== 'unknown' && fName !== 'private') famParams.set('hn', fName);
+            if (fSur) famParams.set('hsn', fSur);
+            if (mName && mName !== 'unknown' && mName !== 'private') famParams.set('wn', mName);
+            if (mSur) famParams.set('wsn', mSur);
+            famParams.set('ex', '1');
+
+            const getBirthLink = (n, s, y, display) => {
+              if (n === 'private' || n === 'unknown') return display;
+              if (!n && !s) return display;
+              const bParams = new URLSearchParams();
+              bParams.set('t', 'birth');
+              if (n) bParams.set('n', n);
+              if (s) bParams.set('sn', s);
+              if (y) bParams.set('dob', y);
+              bParams.set('ex', '1');
+              return `<a href="?${bParams.toString()}" target="_blank" rel="noopener" class="name-link">${display}</a>`;
+            };
+
+            const fDisplay = [fName, fSur].filter(Boolean).join(' ') + fYear;
+            const mDisplay = [mName, mSur].filter(Boolean).join(' ') + mYear;
+
+            if (fDisplay) parentsCount++;
+            if (mDisplay) parentsCount++;
+
+            let htmlStr = `<div class="parent-group" style="margin-bottom: 8px;">
+              <a href="?${famParams.toString()}" target="_blank" rel="noopener" class="name-link" style="font-weight: 600;">${t(labelKey)}:</a><br>`;
+            if (fDisplay) htmlStr += `${getBirthLink(fName, fSur, father.year, fDisplay)}<br>`;
+            if (mDisplay) htmlStr += `${getBirthLink(mName, mSur, mother.year, mDisplay)}`;
+            htmlStr += `</div>`;
+            return htmlStr;
+          } catch(e) { return ''; }
+        };
+        const combined = [renderParents(row.husband_parents, 'label_husband'), renderParents(row.wife_parents, 'label_wife')].filter(Boolean).join('');
+        if (parentsCount > 0) {
+          html += `<td>
+          <details class="expandable-cell">
+            <summary>${parentsCount}</summary>
+            <div class="expanded-content">${combined}</div>
+          </details>
+        </td>`;
+        } else {
+          html += `<td></td>`;
+        }
       } else {
         html += `<td>${row[col] || ''}</td>`;
       }
