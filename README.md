@@ -26,10 +26,16 @@ Before importing data into the database, extract the JSON records from your raw 
    pip install -r tools/requirements.txt
    ```
 3. Run the extraction script:
+
    ```bash
    python tools/gedcom-to-json.py --mode update
    ```
+
    _This will parse the GEDCOM files and output JSON datasets alongside a `metadata.json` file in the `data/output/` directory._
+
+   **Supported arguments:**
+   - `--mode update` (default): Skips files whose JSON is already up-to-date.
+   - `--mode full`: Processes all GEDCOM files and overwrites existing JSON outputs.
 
 ## 2. Deploying the Backend & Database
 
@@ -52,6 +58,14 @@ Once the API and DB containers are running, populate the database with the extra
 ```bash
 docker compose exec api python tools/import_to_db.py --mode update
 ```
+
+**Supported arguments:**
+- `--mode update` (default): Only reimports contributors whose data has changed (compares `last_modified` and record counts against the DB).
+- `--mode full`: Reimports all contributors regardless of modification time.
+- `--drop-tables`: Drops and recreates all tables from scratch before importing. Implies a full reimport.
+- `--force-births`: Force re-import of birth records for all contributors, even if up to date.
+- `--force-families`: Force re-import of family records for all contributors, even if up to date.
+- `--force-deaths`: Force re-import of death records for all contributors, even if up to date.
 
 You can preview the built application locally with:
 
