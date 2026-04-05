@@ -224,7 +224,7 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         }
         if (linksList.length) {
           const icons = linksList.map(url => {
-            const icon = url.includes('geneanet.org/cemetery') ? '⚰' : '🔗';
+            const icon = url.includes('geneanet.org/cemetery') ? '🪦' : '🔗';
             return `<a href="${url}" target="_blank" rel="noopener" title="${url}">${icon}</a>`;
           }).join(' ');
           html += `<td class="link-cell">${icons}</td>`;
