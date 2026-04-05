@@ -4,8 +4,10 @@ import argparse
 import os
 import json
 import re
+import time
 import urllib.request
 import unicodedata
+import ssl
 from datetime import datetime
 from gedcom.parser import Parser
 
@@ -134,7 +136,9 @@ def get_name_surname(individual):
 
 MATRICULA_RE = re.compile(r"https?://data\.matricula-online\.eu/[^\"\s<]+")
 _MATRICULA_LANG_RE = re.compile(r"(https?://data\.matricula-online\.eu/)[a-z]{2}(/)")
-GENEANET_CEMETERY_RE = re.compile(r"https?://[a-z]{2}\.geneanet\.org/cemetery/[^\"\s<]+")
+GENEANET_CEMETERY_RE = re.compile(
+    r"https?://[a-z]{2}\.geneanet\.org/cemetery/[^\"\s<]+"
+)
 FINDAGRAVE_RE = re.compile(
     r"https?://(?:www\.)?findagrave\.com/(?:memorial/[^\"\s<]+|cgi-bin/fg\.cgi\?[^\"\s<]*page=gr[^\"\s<]*)"
 )
@@ -142,6 +146,7 @@ FINDAGRAVE_RE = re.compile(
 
 def _normalize_matricula_url(url):
     """Normalize matricula URL to /en/ locale to avoid language-variant duplicates."""
+    url = url.replace("http://", "https://")
     return _MATRICULA_LANG_RE.sub(r"\1en\2", url)
 
 
@@ -282,6 +287,7 @@ def _indi_level_link(element, sources_dict, obje_dict=None):
 
 
 _URL_CACHE = {}
+_ERROR_CACHE = set()
 
 
 def load_url_cache():
@@ -289,7 +295,14 @@ def load_url_cache():
     if os.path.exists(CACHE_FILE):
         try:
             with open(CACHE_FILE, "r", encoding="utf-8") as f:
-                _URL_CACHE = json.load(f)
+                raw_cache = json.load(f)
+                for k, v in raw_cache.items():
+                    # Drop bad cache entries to self-heal (forces 1 re-fetch per run)
+                    if isinstance(v, list) and (len(v) == 0 or len(v) >= 3):
+                        continue
+                    if v == "unknown":
+                        continue
+                    _URL_CACHE[k] = v
         except Exception as e:
             print(f"Warning: Could not load URL cache: {e}")
             _URL_CACHE = {}
@@ -305,33 +318,134 @@ def save_url_cache():
 
 def _determine_link_type(url):
     if not url:
-        return "unknown"
+        return []
 
     # Strip query parameters (like ?pg=N) to cache and fetch at the book level
     base_url = url.split("?")[0]
 
     if base_url in _URL_CACHE:
-        return _URL_CACHE[base_url]
+        val = _URL_CACHE[base_url]
+        if isinstance(val, list):
+            return val
+        elif isinstance(val, str):
+            return [val]
 
-    try:
-        req = urllib.request.Request(
-            base_url,
-            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"},
-        )
-        with urllib.request.urlopen(req, timeout=5) as response:
-            html = response.read().decode("utf-8", errors="ignore")
-            if "Taufbuch" in html or "Krstna knjiga" in html:
-                _URL_CACHE[base_url] = "birth"
-            elif "Sterbebuch" in html or "Mrliška knjiga" in html:
-                _URL_CACHE[base_url] = "death"
-            elif "Trauungsbuch" in html or "Poročna knjiga" in html:
-                _URL_CACHE[base_url] = "marriage"
+    if base_url in _ERROR_CACHE:
+        return []
+
+    for attempt in range(3):
+        try:
+            ctx = ssl.create_default_context()
+            ctx.check_hostname = False
+            ctx.verify_mode = ssl.CERT_NONE
+
+            req = urllib.request.Request(
+                base_url,
+                headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"},
+            )
+            with urllib.request.urlopen(req, timeout=5, context=ctx) as response:
+                html = response.read().decode("utf-8", errors="ignore").lower()
+
+                # Extract headings and title to avoid matching sidebar navigation lists
+                headings = re.findall(
+                    r"<title>(.*?)</title>|<h\d[^>]*>(.*?)</h\d>", html, flags=re.DOTALL
+                )
+                text_to_search = " ".join([m[0] or m[1] for m in headings])
+
+                types = []
+                if any(
+                    kw in text_to_search
+                    for kw in ["taufbuch", "krstna knjiga", "krsti", "taufen"]
+                ):
+                    types.append("birth")
+                if any(
+                    kw in text_to_search
+                    for kw in ["sterbebuch", "mrliška knjiga", "mrliči", "sterbefälle"]
+                ):
+                    types.append("death")
+                if any(
+                    kw in text_to_search
+                    for kw in [
+                        "trauungsbuch",
+                        "poročna knjiga",
+                        "poroke",
+                        "trauungen",
+                        "kopulationsbuch",
+                    ]
+                ):
+                    types.append("marriage")
+
+                # If headings didn't yield anything, try the whole HTML but strip <a> tags
+                # to avoid the navigation menu containing all book types
+                if not types:
+                    clean_html = re.sub(
+                        r"<a\s+[^>]*>.*?</a>", "", html, flags=re.DOTALL
+                    )
+                    if any(
+                        kw in clean_html
+                        for kw in ["taufbuch", "krstna knjiga", "krsti", "taufen"]
+                    ):
+                        types.append("birth")
+                    if any(
+                        kw in clean_html
+                        for kw in [
+                            "sterbebuch",
+                            "mrliška knjiga",
+                            "mrliči",
+                            "sterbefälle",
+                        ]
+                    ):
+                        types.append("death")
+                    if any(
+                        kw in clean_html
+                        for kw in [
+                            "trauungsbuch",
+                            "poročna knjiga",
+                            "poroke",
+                            "trauungen",
+                            "kopulationsbuch",
+                        ]
+                    ):
+                        types.append("marriage")
+
+                _URL_CACHE[base_url] = types
+                return types
+        except Exception as e:
+            if attempt < 2:
+                time.sleep(1 * (attempt + 1))
             else:
-                _URL_CACHE[base_url] = "unknown"
-    except Exception:
-        _URL_CACHE[base_url] = "unknown"
+                print(f"  [!] Failed to fetch {base_url} after 3 attempts: {e}")
+                _ERROR_CACHE.add(base_url)
+                return []
 
-    return _URL_CACHE[base_url]
+    _URL_CACHE[base_url] = []  # Fallback
+    return []
+
+
+def sanitize_links(links, expected_type):
+    """
+    Keeps links that match the expected type (or unknown),
+    and removes those that are strictly of another type.
+    """
+    sanitized = []
+    misplaced = []
+    for url in links:
+        if _find_cemetery_url(url):
+            # Cemetery links explicitly cited on an event should stay there
+            # (as gravestones often verify birth dates), but we also copy them to 'death'.
+            if url not in sanitized:
+                sanitized.append(url)
+            if expected_type != "death":
+                misplaced.append((url, ["death"]))
+            continue
+
+        types = _determine_link_type(url)
+        if not types or expected_type in types:
+            if url not in sanitized:
+                sanitized.append(url)
+        else:
+            misplaced.append((url, types))
+    return sanitized, misplaced
 
 
 def _extract_indi_links(element, sources_dict, obje_dict=None):
@@ -350,19 +464,17 @@ def _extract_indi_links(element, sources_dict, obje_dict=None):
             if url not in d_links:
                 d_links.append(url)
         else:
-            link_type = _determine_link_type(url)
-            if link_type == "birth":
+            types = _determine_link_type(url)
+            if not types:
                 if url not in b_links:
                     b_links.append(url)
-            elif link_type == "death":
-                if url not in d_links:
-                    d_links.append(url)
-            elif link_type == "marriage":
-                if url not in m_links:
-                    m_links.append(url)
             else:
-                if url not in b_links:
+                if "birth" in types and url not in b_links:
                     b_links.append(url)
+                if "death" in types and url not in d_links:
+                    d_links.append(url)
+                if "marriage" in types and url not in m_links:
+                    m_links.append(url)
 
     for child in element.get_child_elements():
         if child.get_tag() in ("NOTE", "SOUR"):
@@ -596,7 +708,9 @@ def main():
                         "births_count": len(births_data_skip),
                         "families_count": len(families_data_skip),
                         "deaths_count": len(deaths_data_skip),
-                        "links_count": sum(1 for r in births_data_skip if r.get("links"))
+                        "links_count": sum(
+                            1 for r in births_data_skip if r.get("links")
+                        )
                         + sum(1 for r in families_data_skip if r.get("links"))
                         + sum(1 for r in deaths_data_skip if r.get("links")),
                         "last_modified": ged_mtime,
@@ -669,21 +783,35 @@ def main():
             if tag == "INDI":
                 pointer = element.get_pointer()
                 name, surname = get_name_surname(element)
-                birth_date, birth_place, birth_links = get_event_data(
+                birth_date, birth_place, raw_birth_links = get_event_data(
                     element, "BIRT", sources_dict
                 )
-                death_date, death_place, death_links = get_event_data(
+                death_date, death_place, raw_death_links = get_event_data(
                     element, "DEAT", sources_dict
                 )
                 # Cemetery links from BURI event → attach to death
-                _, _, buri_links = get_event_data(element, "BURI", sources_dict)
-                for url in buri_links:
-                    if url not in death_links:
-                        death_links.append(url)
+                _, _, raw_buri_links = get_event_data(element, "BURI", sources_dict)
+                for url in raw_buri_links:
+                    if url not in raw_death_links:
+                        raw_death_links.append(url)
+
+                birth_links, b_misplaced = sanitize_links(raw_birth_links, "birth")
+                death_links, d_misplaced = sanitize_links(raw_death_links, "death")
+
                 # Fallback: links at INDI level, routing by type (cemetery→death, matricula→fetched)
                 indi_b_links, indi_d_links, indi_m_links = _extract_indi_links(
                     element, sources_dict, obje_dict
                 )
+
+                marr_links = list(indi_m_links)
+                for url, types in b_misplaced + d_misplaced:
+                    if "marriage" in types and url not in marr_links:
+                        marr_links.append(url)
+                    if "birth" in types and url not in birth_links:
+                        birth_links.append(url)
+                    if "death" in types and url not in death_links:
+                        death_links.append(url)
+
                 for url in indi_b_links:
                     if url not in birth_links:
                         birth_links.append(url)
@@ -708,7 +836,7 @@ def main():
                     "surname": surname,
                     "birth_date": birth_date,
                     "is_deceased": is_deceased_flag,
-                    "marr_links": indi_m_links,
+                    "marr_links": marr_links,
                     "famc": famc_pointers,
                 }
 
@@ -763,13 +891,15 @@ def main():
             family_dict[family.get_pointer()] = {"husb": h_ptr, "wife": w_ptr}
 
         for family in family_elements:
-            marr_date, marr_place, marr_links = get_event_data(
+            marr_date, marr_place, raw_marr_links = get_event_data(
                 family, "MARR", sources_dict
             )
             # Fallback: links at FAM level (e.g. KOŠIR.GED stores NOTE on FAM, not inside MARR)
             for url in _indi_level_link(family, sources_dict, obje_dict):
-                if url not in marr_links:
-                    marr_links.append(url)
+                if url not in raw_marr_links:
+                    raw_marr_links.append(url)
+
+            marr_links, _ = sanitize_links(raw_marr_links, "marriage")
 
             husb_pointer, wife_pointer = "", ""
             child_pointers = []
@@ -786,7 +916,9 @@ def main():
 
             # Use INDI-level marriage links if FAM-level is missing
             if not marr_links:
-                marr_links = list(husb.get("marr_links", []) or wife.get("marr_links", []))
+                marr_links = list(
+                    husb.get("marr_links", []) or wife.get("marr_links", [])
+                )
 
             def get_parents_list(person_data):
                 parents_list = []
