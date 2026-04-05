@@ -67,6 +67,7 @@ export async function renderTotalsBar() {
     setEl('total-all', (births + families + deaths).toLocaleString());
     setEl('total-links', links.toLocaleString());
     setEl('total-last-update', lastUpdate);
+    setEl('data-updated', lastUpdate);
     document.getElementById('totals-bar').style.display = '';
   } catch { /* silently skip if API unavailable */ }
 }
