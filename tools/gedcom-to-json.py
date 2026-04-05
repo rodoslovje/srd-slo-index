@@ -715,17 +715,30 @@ def main():
                             if p_data:
                                 p_birth_date = p_data.get("birth_date", "")
                                 p_is_deceased = p_data.get("is_deceased", False)
-                                is_private = is_recent(p_birth_date, birth_cutoff) and not p_is_deceased
+                                is_private = (
+                                    is_recent(p_birth_date, birth_cutoff)
+                                    and not p_is_deceased
+                                )
                                 if is_private:
-                                    parents_list.append({"name": "private", "surname": "", "year": ""})
+                                    parents_list.append(
+                                        {"name": "private", "surname": "", "year": ""}
+                                    )
                                 else:
                                     p_name = p_data.get("name", "")
                                     if not p_name:
                                         p_name = "unknown"
                                     p_surname = p_data.get("surname", "")
                                     p_birth_year = extract_year(p_birth_date)
-                                    p_year_str = str(p_birth_year) if p_birth_year else ""
-                                    parents_list.append({"name": p_name, "surname": p_surname, "year": p_year_str})
+                                    p_year_str = (
+                                        str(p_birth_year) if p_birth_year else ""
+                                    )
+                                    parents_list.append(
+                                        {
+                                            "name": p_name,
+                                            "surname": p_surname,
+                                            "year": p_year_str,
+                                        }
+                                    )
                 return parents_list
 
             husband_parents = get_parents_list(husb)
@@ -856,6 +869,30 @@ def main():
         # --- 4. Write Output JSON Files ---
         ged_mtime = os.path.getmtime(input_path)
 
+        # Sort the extracted data to ensure stable and deterministic JSON output
+        births_data.sort(
+            key=lambda x: (
+                x.get("surname", "") or "",
+                x.get("name", "") or "",
+                x.get("date_of_birth", "") or "",
+            )
+        )
+        families_data.sort(
+            key=lambda x: (
+                x.get("husband_surname", "") or "",
+                x.get("husband_name", "") or "",
+                x.get("wife_surname", "") or "",
+                x.get("wife_name", "") or "",
+            )
+        )
+        deaths_data.sort(
+            key=lambda x: (
+                x.get("surname", "") or "",
+                x.get("name", "") or "",
+                x.get("date_of_death", "") or "",
+            )
+        )
+
         with open(births_output_path, "w", encoding="utf-8") as f:
             json.dump(births_data, f, ensure_ascii=False, indent=4)
         os.utime(births_output_path, (ged_mtime, ged_mtime))
@@ -895,6 +932,7 @@ def main():
         )
 
     # Write global metadata.json for the frontend
+    metadata.sort(key=lambda x: x.get("contributor", ""))
     metadata_output_path = os.path.join(OUTPUT_DIR, "metadata.json")
     with open(metadata_output_path, "w", encoding="utf-8") as f:
         json.dump(metadata, f, ensure_ascii=False, indent=4)
