@@ -1,4 +1,4 @@
-import { t } from './i18n.js';
+import { t, getCurrentLang } from './i18n.js';
 import { PARAM_MAP_REVERSE } from './url.js';
 
 function exportToCSV(data, columns, filename) {
@@ -224,8 +224,11 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         }
         if (linksList.length) {
           const icons = linksList.map(url => {
-            const icon = url.includes('geneanet.org/cemetery') ? '🪦' : '🔗';
-            return `<a href="${url}" target="_blank" rel="noopener" title="${url}">${icon}</a>`;
+            const icon = (url.includes('geneanet.org/cemetery') || url.includes('findagrave.com')) ? '🪦' : '🔗';
+            const href = url.includes('matricula-online.eu')
+              ? url.replace(/\/(en|sl)\//, `/${getCurrentLang()}/`)
+              : url;
+            return `<a href="${href}" target="_blank" rel="noopener" title="${href}">${icon}</a>`;
           }).join(' ');
           html += `<td class="link-cell">${icons}</td>`;
         } else {

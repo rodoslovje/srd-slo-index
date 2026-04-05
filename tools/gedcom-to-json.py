@@ -133,7 +133,16 @@ def get_name_surname(individual):
 
 
 MATRICULA_RE = re.compile(r"https?://data\.matricula-online\.eu/[^\"\s<]+")
+_MATRICULA_LANG_RE = re.compile(r"(https?://data\.matricula-online\.eu/)[a-z]{2}(/)")
 GENEANET_CEMETERY_RE = re.compile(r"https?://[a-z]{2}\.geneanet\.org/cemetery/[^\"\s<]+")
+FINDAGRAVE_RE = re.compile(
+    r"https?://(?:www\.)?findagrave\.com/(?:memorial/[^\"\s<]+|cgi-bin/fg\.cgi\?[^\"\s<]*page=gr[^\"\s<]*)"
+)
+
+
+def _normalize_matricula_url(url):
+    """Normalize matricula URL to /en/ locale to avoid language-variant duplicates."""
+    return _MATRICULA_LANG_RE.sub(r"\1en\2", url)
 
 
 def _find_matricula_url(text):
@@ -141,15 +150,18 @@ def _find_matricula_url(text):
     if not text:
         return ""
     m = MATRICULA_RE.search(text)
-    return m.group().rstrip(".,;)") if m else ""
+    return _normalize_matricula_url(m.group().rstrip(".,;)")) if m else ""
 
 
 def _find_cemetery_url(text):
-    """Return the first geneanet.org/cemetery URL found in text, or empty string."""
+    """Return the first cemetery URL (Geneanet or FindAGrave) found in text, or empty string."""
     if not text:
         return ""
-    m = GENEANET_CEMETERY_RE.search(text)
-    return m.group().rstrip(".,;)") if m else ""
+    for pattern in (GENEANET_CEMETERY_RE, FINDAGRAVE_RE):
+        m = pattern.search(text)
+        if m:
+            return m.group().rstrip(".,;)")
+    return ""
 
 
 def _find_all_links(text):
@@ -160,9 +172,12 @@ def _find_all_links(text):
     url = _find_matricula_url(text)
     if url:
         links.append(url)
-    url = _find_cemetery_url(text)
-    if url and url not in links:
-        links.append(url)
+    for pattern in (GENEANET_CEMETERY_RE, FINDAGRAVE_RE):
+        m = pattern.search(text)
+        if m:
+            url = m.group().rstrip(".,;)")
+            if url not in links:
+                links.append(url)
     return links
 
 
@@ -215,18 +230,18 @@ def _link_from_subelement(element, sources_dict):
         # P5/P7: reference pointer @Sxxx@
         if val.startswith("@") and val.endswith("@"):
             template = sources_dict.get(val, "")
-            if not template:
-                return []
-            # P7: if a PAGE child exists, substitute the page number into the template URL
-            for sour_child in element.get_child_elements():
-                if sour_child.get_tag() == "PAGE":
-                    page_val = (sour_child.get_value() or "").strip()
-                    m = re.search(r"\d+", page_val)
-                    if m and _PAGE_RE.search(template):
-                        return [_apply_page(template, m.group())]
-            # P5: plain URL stored directly in sources_dict (no page substitution needed)
-            return _find_all_links(template) or [template]
-        # P3: inline SOUR > PAGE / P4: inline SOUR > DATA > TEXT
+            if template:
+                # P7: if a PAGE child exists, substitute the page number into the template URL
+                for sour_child in element.get_child_elements():
+                    if sour_child.get_tag() == "PAGE":
+                        page_val = (sour_child.get_value() or "").strip()
+                        m = re.search(r"\d+", page_val)
+                        if m and _PAGE_RE.search(template):
+                            return [_apply_page(template, m.group())]
+                # P5: plain URL stored directly in sources_dict (no page substitution needed)
+                return _find_all_links(template) or [template]
+            # pointer not in sources_dict — fall through to check inline DATA > WWW/TEXT children
+        # P3: inline SOUR > PAGE / P4: inline SOUR > DATA > TEXT/WWW
         urls = []
         for sour_child in element.get_child_elements():
             if sour_child.get_tag() == "PAGE":
@@ -235,7 +250,7 @@ def _link_from_subelement(element, sources_dict):
                         urls.append(url)
             elif sour_child.get_tag() == "DATA":
                 for data_child in sour_child.get_child_elements():
-                    if data_child.get_tag() == "TEXT":
+                    if data_child.get_tag() in ("TEXT", "WWW"):
                         for url in _find_all_links(data_child.get_value() or ""):
                             if url not in urls:
                                 urls.append(url)
@@ -305,11 +320,11 @@ def _determine_link_type(url):
         )
         with urllib.request.urlopen(req, timeout=5) as response:
             html = response.read().decode("utf-8", errors="ignore")
-            if "Taufbuch" in html:
+            if "Taufbuch" in html or "Krstna knjiga" in html:
                 _URL_CACHE[base_url] = "birth"
-            elif "Sterbebuch" in html:
+            elif "Sterbebuch" in html or "Mrliška knjiga" in html:
                 _URL_CACHE[base_url] = "death"
-            elif "Trauungsbuch" in html:
+            elif "Trauungsbuch" in html or "Poročna knjiga" in html:
                 _URL_CACHE[base_url] = "marriage"
             else:
                 _URL_CACHE[base_url] = "unknown"
@@ -376,10 +391,18 @@ def build_obje_dict(root_elements):
             continue
         for child in element.get_child_elements():
             if child.get_tag() == "FILE":
-                raw = child.get_value() or ""
-                urls = _find_all_links(raw)
+                urls = _find_all_links(child.get_value() or "")
                 if urls:
                     obje[pointer] = urls[0]
+                    break
+            elif child.get_tag() == "_ORIG":
+                for orig_child in child.get_child_elements():
+                    if orig_child.get_tag() == "_URL":
+                        urls = _find_all_links(orig_child.get_value() or "")
+                        if urls:
+                            obje[pointer] = urls[0]
+                            break
+                if pointer in obje:
                     break
     return obje
 
@@ -698,7 +721,7 @@ def main():
                         "_is_deceased": is_deceased_flag,
                     }
                     if birth_links:
-                        record["links"] = birth_links
+                        record["links"] = list(dict.fromkeys(birth_links))
                     births_data.append(record)
 
                 if death_date or death_place:
@@ -709,7 +732,7 @@ def main():
                         "place_of_death": death_place or "",
                     }
                     if death_links:
-                        record["links"] = death_links
+                        record["links"] = list(dict.fromkeys(death_links))
                     deaths_data.append(record)
 
             elif tag == "FAM":
@@ -872,7 +895,7 @@ def main():
                 continue
 
             if marr_links:
-                record["links"] = marr_links
+                record["links"] = list(dict.fromkeys(marr_links))
             if children_string:
                 record["children"] = children_string
             if children_list:
