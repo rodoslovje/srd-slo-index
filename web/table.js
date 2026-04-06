@@ -231,7 +231,7 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
               icon = '🪦';
               titleText = t('icon_grave');
             } else if (url.includes('sistory.si/ww')) {
-              icon = '🎖️';
+              icon = '🎖︎';
               titleText = t('icon_military');
             } else if (url.includes('sistory.si') && url.includes('popisi')) {
               icon = '📋';
