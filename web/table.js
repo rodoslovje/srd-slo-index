@@ -224,7 +224,7 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         }
         if (linksList.length) {
           const icons = linksList.map(url => {
-            const icon = (url.includes('geneanet.org/cemetery') || url.includes('findagrave.com')) ? '🪦' : '🔗';
+            const icon = (url.includes('geneanet.org') || url.includes('findagrave.com')) ? '🪦' : '🔗';
             const href = url.includes('matricula-online.eu')
               ? url.replace(/\/(en|sl)\//, `/${getCurrentLang()}/`)
               : url;

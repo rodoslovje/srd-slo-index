@@ -137,7 +137,7 @@ def get_name_surname(individual):
 MATRICULA_RE = re.compile(r"https?://data\.matricula-online\.eu/[^\"\s<]+")
 _MATRICULA_LANG_RE = re.compile(r"(https?://data\.matricula-online\.eu/)[a-z]{2}(/)")
 GENEANET_CEMETERY_RE = re.compile(
-    r"https?://[a-z]{2}\.geneanet\.org/cemetery/[^\"\s<]+"
+    r"https?://[a-z]{2}\.geneanet\.org/(?:cemetery|friedhof)[^\"\s<]*"
 )
 FINDAGRAVE_RE = re.compile(
     r"https?://(?:www\.)?findagrave\.com/(?:memorial/[^\"\s<]+|cgi-bin/fg\.cgi\?[^\"\s<]*page=gr[^\"\s<]*)"
