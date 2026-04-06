@@ -282,9 +282,9 @@ async function loadSurnameCloud(contributor) {
       el.addEventListener('click', () => {
         const sn = el.dataset.surname;
         const contrib = el.dataset.contributor;
-        const urlParams = { t: 'general', sn };
+        const urlParams = { t: 'general', sn, ex: '1' };
         if (contrib) urlParams.c = contrib;
-        window.location.search = new URLSearchParams(urlParams).toString();
+        window.open('?' + new URLSearchParams(urlParams).toString(), '_blank');
       });
     });
   } catch (err) {

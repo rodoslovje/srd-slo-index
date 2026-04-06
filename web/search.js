@@ -340,7 +340,7 @@ export function restoreFromURL() {
   const tParam = params.get('t');
 
   const hasGenParam = ['q', 'name', 'surname', 'date_from', 'date_to', 'place', 'contributor'].some(k => params.has(k) || params.has(PARAM_MAP[k] || k));
-  if (!tParam && hasGenParam) {
+  if ((!tParam || tParam === 'general') && hasGenParam) {
     const fields = ['query', 'name', 'surname', 'date_from', 'date_to', 'place', 'contributor'];
     fields.forEach(f => {
       const paramKey = f === 'query' ? 'q' : f;
