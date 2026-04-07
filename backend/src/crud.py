@@ -7,7 +7,7 @@ from sqlalchemy import func, or_, and_, text, cast, Text, Integer
 from . import models
 
 METADATA_PATH = os.path.join(
-    os.path.dirname(__file__), '..', '..', 'data', 'output', 'metadata.json'
+    os.path.dirname(__file__), '..', 'data', 'output', 'metadata.json'
 )
 
 def _load_contributor_links():
