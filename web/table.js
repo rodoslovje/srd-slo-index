@@ -157,19 +157,21 @@ function getValue(row, col) {
   return String(row[col] || '').toLowerCase();
 }
 
+const collator = new Intl.Collator('sl', { sensitivity: 'base' });
+
+function cmp(a, b) {
+  if (typeof a === 'number' && typeof b === 'number') return a - b;
+  return collator.compare(String(a ?? ''), String(b ?? ''));
+}
+
 function sortData(data, primary, secondary) {
   data.sort((a, b) => {
-    const va = getValue(a, primary.column);
-    const vb = getValue(b, primary.column);
     const dir = primary.ascending ? 1 : -1;
-    if (va < vb) return -1 * dir;
-    if (va > vb) return 1 * dir;
+    const r = cmp(getValue(a, primary.column), getValue(b, primary.column));
+    if (r !== 0) return r * dir;
     if (secondary) {
-      const sa = getValue(a, secondary.column);
-      const sb = getValue(b, secondary.column);
       const sdir = secondary.ascending ? 1 : -1;
-      if (sa < sb) return -1 * sdir;
-      if (sa > sb) return 1 * sdir;
+      return cmp(getValue(a, secondary.column), getValue(b, secondary.column)) * sdir;
     }
     return 0;
   });
