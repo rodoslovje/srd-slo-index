@@ -26,4 +26,7 @@ function buildInfoPlugin() {
 
 export default defineConfig({
   plugins: [buildInfoPlugin()],
+  server: {
+    host: true,
+  },
 });
