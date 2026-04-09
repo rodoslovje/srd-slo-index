@@ -122,14 +122,10 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     document.getElementById('death-results').style.display = 'none';
     showIntros();
 
-    // On desktop: open sidebar for search tabs, close for contributors
-    // On mobile: hamburger controls the sidebar — never auto-change
-    if (window.innerWidth > 768) {
-      if (SEARCH_TABS.includes(targetTab)) {
-        sidebar.classList.add('open');
-      } else {
-        sidebar.classList.remove('open');
-      }
+    if (SEARCH_TABS.includes(targetTab)) {
+      sidebar.classList.add('open');
+    } else {
+      sidebar.classList.remove('open');
     }
 
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -175,7 +171,7 @@ async function init() {
     if (buildEl) buildEl.textContent = BUILD_TIME.slice(0, 10);
     if (dataEl) dataEl.textContent = DATA_UPDATED.slice(0, 10);
 
-    if (window.innerWidth > 768) sidebar.classList.add('open');
+    sidebar.classList.add('open');
 
     // Infer active tab from URL params
     const urlParams = new URLSearchParams(window.location.search);

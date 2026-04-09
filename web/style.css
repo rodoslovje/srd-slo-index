@@ -614,11 +614,21 @@ h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 
     display: flex;
   }
 
-  #sidebar {
-    width: 85%;
-    max-width: 320px;
-    top: var(--nav-height);
-    max-height: calc(100vh - var(--nav-height));
+  .content-area {
+    display: flex;
+    flex-direction: column;
+  }
+
+  #sidebar.open {
+    position: static;
+    width: 100%;
+    max-width: none;
+    max-height: none;
+    box-shadow: none;
+    border-left: none;
+    border-bottom: 1px solid var(--border);
+    right: auto;
+    order: -1;
   }
 
   .search-box {
