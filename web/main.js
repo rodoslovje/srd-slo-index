@@ -1,10 +1,10 @@
 import { t, initI18n, onLanguageChange, getIntro } from './i18n.js';
 import { BUILD_TIME, DATA_UPDATED } from './build-info.js';
 import { renderContributors, refreshContributorsIfVisible, renderTotalsBar, prefetchContributors } from './contributors.js';
-import { setupGeneralSearch, setupBirthSearchForm, setupFamilySearchForm, setupDeathSearchForm, restoreFromURL } from './search.js';
-import { updateURL } from './url.js';
+import { setupGeneralSearch, setupBirthSearchForm, setupFamilySearchForm, setupDeathSearchForm, restoreFromURL, getTabURLParams } from './search.js';
 
 const SEARCH_TABS = ['tab-general', 'tab-birth', 'tab-family', 'tab-death'];
+export const tabsWithResults = new Set();
 
 // --- Clearable inputs ---
 
@@ -63,10 +63,11 @@ export function hideIntro(id) {
   if (el) el.style.display = 'none';
 }
 
-export function showIntros() {
+export function showIntros(onlyId = null) {
   ['intro-general', 'intro-birth', 'intro-family', 'intro-death'].forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.style.display = '';
+    if (!el) return;
+    el.style.display = (!onlyId || id === onlyId) ? '' : 'none';
   });
 }
 
@@ -104,9 +105,17 @@ hamburgerBtn.addEventListener('click', (e) => {
     }
   }
   sidebar.classList.toggle('open');
-  if (window.innerWidth <= 768 && sidebar.classList.contains('open')) {
-    document.documentElement.scrollTop = 0;
-    document.body.scrollTop = 0;
+  if (sidebar.classList.contains('open')) {
+    if (window.innerWidth <= 768) {
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    }
+    const activeSection = sidebar.querySelector('.sidebar-section.active');
+    if (activeSection) {
+      const inputs = Array.from(activeSection.querySelectorAll('input[type="text"]'));
+      const target = inputs.find(i => i.value.trim()) || inputs[0];
+      if (target) setTimeout(() => target.focus(), 0);
+    }
   }
 });
 
@@ -123,20 +132,53 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     e.stopPropagation();
     const targetTab = btn.dataset.target;
 
+    const tabTypeMap = {
+      'tab-general':      'general',
+      'tab-birth':        'birth',
+      'tab-family':       'family',
+      'tab-death':        'death',
+      'tab-contributors': 'contributors',
+    };
+    const urlT = tabTypeMap[targetTab];
+    if (urlT) {
+      const params = urlT === 'contributors' ? { t: urlT } : getTabURLParams(urlT);
+      const url = new URL(window.location);
+      url.search = '';
+      for (const [k, v] of Object.entries(params)) {
+        if (v) url.searchParams.set(k, v);
+      }
+      history.replaceState(null, '', url);
+    }
+
     if (targetTab === 'tab-contributors') {
       document.body.classList.add('contributors-view');
-      updateURL({ t: 'contributors' });
       renderContributors();
       renderTotalsBar();
     } else {
       document.body.classList.remove('contributors-view');
     }
 
-    document.getElementById('general-results').style.display = 'none';
-    document.getElementById('birth-results').style.display = 'none';
-    document.getElementById('family-results').style.display = 'none';
-    document.getElementById('death-results').style.display = 'none';
-    showIntros();
+    const resultsMap = {
+      'tab-general': 'general-results',
+      'tab-birth':   'birth-results',
+      'tab-family':  'family-results',
+      'tab-death':   'death-results',
+    };
+    ['tab-general', 'tab-birth', 'tab-family', 'tab-death'].forEach(tab => {
+      if (tab !== targetTab) document.getElementById(resultsMap[tab])?.style.setProperty('display', 'none');
+    });
+    const introMap = {
+      'tab-general': 'intro-general',
+      'tab-birth':   'intro-birth',
+      'tab-family':  'intro-family',
+      'tab-death':   'intro-death',
+    };
+    if (tabsWithResults.has(targetTab)) {
+      document.getElementById(resultsMap[targetTab]).style.display = 'block';
+      hideIntro(introMap[targetTab]);
+    } else {
+      showIntros(introMap[targetTab]);
+    }
 
     if (SEARCH_TABS.includes(targetTab)) {
       sidebar.classList.add('open');
@@ -155,7 +197,13 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
       'tab-death':   'death-search-sidebar',
     };
     const sidebarSection = sidebarSectionMap[targetTab];
-    if (sidebarSection) document.getElementById(sidebarSection).classList.add('active');
+    if (sidebarSection) {
+      const section = document.getElementById(sidebarSection);
+      section.classList.add('active');
+      const inputs = Array.from(section.querySelectorAll('input[type="text"]'));
+      const target = inputs.find(i => i.value.trim()) || inputs[0];
+      if (target) setTimeout(() => target.focus(), 0);
+    }
 
     document.querySelectorAll(`.tab-btn[data-target="${targetTab}"]`).forEach(b => b.classList.add('active'));
     document.getElementById(targetTab).classList.add('active');

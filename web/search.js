@@ -2,7 +2,7 @@ import { t, onLanguageChange } from './i18n.js';
 import { renderTable } from './table.js';
 import { API_BASE_URL, birthColumns, familyColumns, deathColumns, DATE_RANGE_COLUMNS, DISPLAY_ONLY_COLUMNS } from './config.js';
 import { updateURL, PARAM_MAP } from './url.js';
-import { hideIntro } from './main.js';
+import { hideIntro, tabsWithResults } from './main.js';
 import { getContributorUrlMap } from './contributors.js';
 
 let lastGeneralResults = null;
@@ -152,6 +152,7 @@ async function performGeneralSearch() {
     const response = await fetch(`${API_BASE_URL}/api/search/general?${apiParams}`);
     const results = await response.json();
     lastGeneralResults = results;
+    tabsWithResults.add('tab-general');
 
     document.getElementById('count-general-births').textContent = results.births?.length || 0;
     document.getElementById('count-general-families').textContent = results.families?.length || 0;
@@ -259,6 +260,7 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
       const response = await fetch(`${API_BASE_URL}/api/search/advanced/${endpoint}?${apiParams}`);
       const results = await response.json();
       lastAdvResults[urlType] = { data: results, cols: columns, defaultSort, defaultSecondarySort };
+      tabsWithResults.add(`tab-${urlType}`);
       document.getElementById(countId).textContent = results.length;
       renderTable(results, tableId, columns, defaultSort, true, defaultSecondarySort, getContributorUrlMap());
       collapseSidebarOnDesktop();
@@ -341,6 +343,34 @@ export function setupDeathSearchForm() {
     defaultSecondarySort: 'name',
     urlType: 'death',
   });
+}
+
+export function getTabURLParams(tabType) {
+  const out = { t: tabType };
+  if (tabType === 'general') {
+    const fields = ['query', 'name', 'surname', 'date_from', 'date_to', 'place', 'contributor'];
+    fields.forEach(f => {
+      const val = document.getElementById(`general-${f}`)?.value.trim();
+      if (val) out[f === 'query' ? 'q' : (PARAM_MAP[f] || f)] = val;
+    });
+    if (document.getElementById('general-exact')?.checked) out.ex = '1';
+    if (document.getElementById('general-has_link')?.checked) out.hl = '1';
+  } else if (tabType === 'birth' || tabType === 'family' || tabType === 'death') {
+    const columns = tabType === 'birth' ? birthColumns : tabType === 'family' ? familyColumns : deathColumns;
+    const prefix = `adv-${tabType}-`;
+    columns.filter(c => !DISPLAY_ONLY_COLUMNS.has(c)).forEach(col => {
+      const val = document.getElementById(`${prefix}${col}`)?.value.trim();
+      if (val) out[PARAM_MAP[col] || col] = val;
+      if (DATE_RANGE_COLUMNS.has(col)) {
+        const toVal = document.getElementById(`${prefix}${col}_to`)?.value.trim();
+        const toKey = `${col}_to`;
+        if (toVal) out[PARAM_MAP[toKey] || toKey] = toVal;
+      }
+    });
+    if (document.getElementById(`${prefix}exact`)?.checked) out.ex = '1';
+    if (document.getElementById(`${prefix}has_link`)?.checked) out.hl = '1';
+  }
+  return out;
 }
 
 export function restoreFromURL() {
