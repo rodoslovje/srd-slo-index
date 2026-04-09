@@ -276,8 +276,9 @@ async function loadSurnameCloud(contributor) {
       return;
     }
 
-    const maxCount = data[0].count;
-    const minCount = data[data.length - 1].count;
+    const maxCount = Math.max(...data.map(d => d.count));
+    const minCount = Math.min(...data.map(d => d.count));
+    data.sort((a, b) => a.surname.localeCompare(b.surname, 'sl'));
     const range = maxCount - minCount || 1;
 
     cloud.innerHTML = data.map(({ surname, count }) => {
