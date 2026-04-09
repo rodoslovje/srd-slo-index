@@ -127,6 +127,8 @@ document.addEventListener('click', (e) => {
 
 // --- Tab Management ---
 
+let isInitializing = false;
+
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -140,7 +142,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
       'tab-contributors': 'contributors',
     };
     const urlT = tabTypeMap[targetTab];
-    if (urlT) {
+    if (urlT && !isInitializing) {
       const params = urlT === 'contributors' ? { t: urlT } : getTabURLParams(urlT);
       const url = new URL(window.location);
       url.search = '';
@@ -245,7 +247,9 @@ async function init() {
     else if (urlT === 'birth') urlTab = 'birth';
     else if (urlT === 'family') urlTab = 'family';
     else if (urlT === 'death') urlTab = 'death';
+    isInitializing = true;
     document.querySelector(`.tab-btn[data-target="tab-${urlTab}"]`)?.click();
+    isInitializing = false;
 
     restoreFromURL();
 
