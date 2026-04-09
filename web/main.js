@@ -114,7 +114,7 @@ hamburgerBtn.addEventListener('click', (e) => {
     if (activeSection) {
       const inputs = Array.from(activeSection.querySelectorAll('input[type="text"]'));
       const target = inputs.find(i => i.value.trim()) || inputs[0];
-      if (target) setTimeout(() => target.focus(), 0);
+      if (target && window.innerWidth > 768) setTimeout(() => target.focus(), 0);
     }
   }
 });
@@ -202,7 +202,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
       section.classList.add('active');
       const inputs = Array.from(section.querySelectorAll('input[type="text"]'));
       const target = inputs.find(i => i.value.trim()) || inputs[0];
-      if (target) setTimeout(() => target.focus(), 0);
+      if (target && window.innerWidth > 768) setTimeout(() => target.focus(), 0);
     }
 
     document.querySelectorAll(`.tab-btn[data-target="${targetTab}"]`).forEach(b => b.classList.add('active'));

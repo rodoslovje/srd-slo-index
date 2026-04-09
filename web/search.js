@@ -8,6 +8,19 @@ import { getContributorUrlMap } from './contributors.js';
 let lastGeneralResults = null;
 const lastAdvResults = { birth: null, family: null, death: null };
 
+function dismissKeyboardAndScrollToResults(resultsId) {
+  if (window.innerWidth <= 768) {
+    document.activeElement?.blur();
+    const el = document.getElementById(resultsId);
+    const target = el?.querySelector('h2') || el;
+    if (target) setTimeout(() => {
+      const navHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--nav-height')) || 0;
+      const y = target.getBoundingClientRect().top + window.scrollY - navHeight;
+      window.scrollTo({ top: y, behavior: 'smooth' });
+    }, 100);
+  }
+}
+
 function collapseSidebarOnDesktop() {
   if (window.innerWidth > 768) {
     document.getElementById('sidebar').classList.remove('open');
@@ -162,6 +175,7 @@ async function performGeneralSearch() {
     renderTable(results.families || [], 'table-general-families', familyColumns, 'husband_surname', true, 'husband_name', getContributorUrlMap());
     renderTable(results.deaths || [], 'table-general-deaths', deathColumns, 'surname', true, 'name', getContributorUrlMap());
     collapseSidebarOnDesktop();
+    dismissKeyboardAndScrollToResults('general-results');
   } catch (error) {
     console.error('Search failed:', error);
     document.getElementById('table-general-births').innerHTML = `<p>${t('search_failed')}</p>`;
@@ -264,6 +278,7 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
       document.getElementById(countId).textContent = results.length;
       renderTable(results, tableId, columns, defaultSort, true, defaultSecondarySort, getContributorUrlMap());
       collapseSidebarOnDesktop();
+      dismissKeyboardAndScrollToResults(resultsId);
     } catch (error) {
       console.error('Search failed:', error);
       document.getElementById(tableId).innerHTML = `<p>${t('search_failed')}</p>`;
