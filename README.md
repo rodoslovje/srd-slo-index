@@ -1,82 +1,256 @@
 # Slovenian Genealogical Index
 
-This project provides a scalable, searchable web application for genealogical data. It features a PostgreSQL database, a Python FastAPI backend, and a vanilla JavaScript frontend.
+A searchable web application for genealogical data with a PostgreSQL database, Python FastAPI backend, and a vanilla JavaScript frontend.
 
 ## Architecture
 
-- **Database:** PostgreSQL (with `pg_trgm` extension for fuzzy searching)
-- **Backend:** Python / FastAPI
-- **Frontend:** Vanilla JS / HTML / CSS
-- **Deployment:** Docker & Docker Compose (backend/db), Caddy (frontend)
+| Layer | Technology |
+|---|---|
+| Database | PostgreSQL 16 (with `pg_trgm` for fuzzy search) |
+| Backend API | Python 3.11 / FastAPI / Uvicorn |
+| Frontend | Vanilla JS / HTML / CSS (Vite build) |
+| Reverse proxy | Caddy 2 |
+| Containerisation | Docker & Docker Compose |
+
+```
+Internet → Caddy → /          → static files (frontend dist/)
+                 → api.domain → Docker: sgi_api (FastAPI :8000)
+                                        ↕
+                                Docker: sgi_postgres (:5432)
+```
+
+---
 
 ## Prerequisites
 
-- **Docker** and **Docker Compose**
-- **Python 3**
+| Tool | Notes |
+|---|---|
+| Docker + Docker Compose | v2+ (`docker compose` command) |
+| Node.js + Yarn | For building the frontend |
+| Python 3 | For local data extraction only |
+| Caddy 2 | As the reverse proxy / web server on the host |
 
-## 1. Data Extraction (Local Prep)
+---
 
-Before importing data into the database, extract the JSON records from your raw GEDCOM (`.ged`) files.
+## 1. Data Extraction (Run Locally)
 
-1. Place your raw `.ged` files into the `data/filtered/` directory. (Create it if it doesn't exist).
-2. Setup a Python virtual environment and install the required dependencies:
+Extract JSON records from your GEDCOM `.ged` files before importing them into the database.
+
+1. Place `.ged` files in `data/filtered/` (create the directory if needed).
+2. Create and activate a Python virtual environment:
    ```bash
    python -m venv .venv
    source .venv/bin/activate
    pip install -r tools/requirements.txt
    ```
 3. Run the extraction script:
-
    ```bash
    python tools/gedcom-to-json.py --mode update
    ```
+   Output JSON files and `data/output/metadata.json` are written to `data/output/`.
 
-   _This will parse the GEDCOM files and output JSON datasets alongside a `metadata.json` file in the `data/output/` directory._
+   **Arguments:**
+   - `--mode update` *(default)* — skips files already up-to-date
+   - `--mode full` — reprocesses all files
 
-   **Supported arguments:**
-   - `--mode update` (default): Skips files whose JSON is already up-to-date.
-   - `--mode full`: Processes all GEDCOM files and overwrites existing JSON outputs.
+---
 
-## 2. Deploying the Backend & Database
+## 2. Server Setup
 
-The database and API backend are containerized and run together on a custom Docker network (`caddy_net`).
+### 2.1 Create the shared Docker network
 
-1. Ensure you have created your `.env` file in the project root with the PostgreSQL credentials.
-2. Ensure the external Docker network exists (create it if your Caddy proxy hasn't already):
-   ```bash
-   docker network create caddy_net
-   ```
-3. Build and start the backend containers in the background:
-   ```bash
-   docker compose up -d --build
-   ```
+Caddy (running on the host or in its own container) and the app containers communicate over a shared Docker network called `caddy_net`.
 
-## 3. Importing Data into PostgreSQL
+```bash
+docker network create caddy_net
+```
 
-Once the API and DB containers are running, populate the database with the extracted JSON files. Execute the import script _inside_ the running API container:
+> If you already have a Caddy container on `caddy_net`, skip this step.
+
+### 2.2 Configure environment variables
+
+Copy the example file and fill in your values:
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env`:
+
+```env
+# PostgreSQL credentials
+POSTGRES_DB=sgi_db
+POSTGRES_USER=sgi_user
+POSTGRES_PASSWORD=a_strong_password_here
+
+# API hostname (without https://) — must match your Caddy config
+SGI_API_HOST=api.yourdomain.com
+```
+
+### 2.3 Build and start the backend containers
+
+```bash
+docker compose up -d --build
+```
+
+This starts two containers:
+- `sgi_postgres` — PostgreSQL database (data persisted in `postgres_data` Docker volume)
+- `sgi_api` — FastAPI application on internal port 8000
+
+Verify they are running:
+
+```bash
+docker compose ps
+```
+
+### 2.4 Import data into PostgreSQL
+
+With the containers running, load the extracted JSON data:
 
 ```bash
 docker compose exec api python tools/import_to_db.py --mode update
 ```
 
-**Supported arguments:**
-- `--mode update` (default): Only reimports contributors whose data has changed (compares `last_modified` and record counts against the DB).
-- `--mode full`: Reimports all contributors regardless of modification time.
-- `--drop-tables`: Drops and recreates all tables from scratch before importing. Implies a full reimport.
-- `--force-births`: Force re-import of birth records for all contributors, even if up to date.
-- `--force-families`: Force re-import of family records for all contributors, even if up to date.
-- `--force-deaths`: Force re-import of death records for all contributors, even if up to date.
+**Arguments:**
+- `--mode update` *(default)* — only reimports contributors whose data has changed
+- `--mode full` — reimports all contributors
+- `--drop-tables` — drops and recreates all tables first (full reimport)
+- `--force-births` / `--force-families` / `--force-deaths` — force reimport of specific record types
 
-You can preview the built application locally with:
+---
+
+## 3. Caddy Configuration
+
+Caddy acts as the reverse proxy for the API and serves the static frontend files.
+
+### 3.1 Install Caddy
 
 ```bash
-yarn preview
+# Debian/Ubuntu
+sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
+sudo apt update && sudo apt install caddy
 ```
 
-## 4. Updating the API/Backend
+### 3.2 Caddyfile
 
-If you make changes to the backend code (e.g., in backend/), you need to rebuild the Docker image and restart the container to apply those changes. Run the following command from the project root:
+Create or edit `/etc/caddy/Caddyfile`:
+
+```caddyfile
+# Frontend — serves the built Vite app
+yourdomain.com {
+    root * /var/www/sgi
+    file_server
+    try_files {path} /index.html
+    encode gzip
+}
+
+# Backend API — reverse proxy to the Docker container
+api.yourdomain.com {
+    reverse_proxy sgi_api:8000 {
+        header_up Host {host}
+    }
+    header Access-Control-Allow-Origin "https://yourdomain.com"
+    encode gzip
+}
+```
+
+> **Note:** Replace `yourdomain.com` and `api.yourdomain.com` with your actual domains. Caddy obtains and renews TLS certificates from Let's Encrypt automatically.
+
+> **Docker network:** For Caddy to resolve `sgi_api` by container name, Caddy must be on `caddy_net`. Either run Caddy inside a container on that network, or use the container's published port (e.g. `localhost:8000`) if Caddy runs on the host.
+
+Reload Caddy after any config change:
+
+```bash
+sudo systemctl reload caddy
+# or, to validate first:
+caddy validate --config /etc/caddy/Caddyfile && sudo systemctl reload caddy
+```
+
+---
+
+## 4. Frontend Build and Deployment
+
+### 4.1 Configure the API host
+
+The frontend reads `SGI_API_HOST` at build time via Vite. Set it in a `.env` file in the project root (same file used by Docker Compose):
+
+```env
+SGI_API_HOST=api.yourdomain.com
+```
+
+### 4.2 Build
+
+```bash
+yarn install
+yarn build
+```
+
+The production-ready files are written to `web/dist/`.
+
+### 4.3 Deploy to the server
+
+Copy the built files to the directory Caddy serves:
+
+```bash
+# Replace user@yourserver with your actual SSH target
+ssh user@yourserver "mkdir -p /var/www/sgi"
+rsync -avz --delete web/dist/ user@yourserver:/var/www/sgi/
+```
+
+Or with `scp`:
+
+```bash
+scp -r web/dist/* user@yourserver:/var/www/sgi/
+```
+
+No Caddy reload is needed — Caddy serves files directly from disk.
+
+---
+
+## 5. Updating
+
+### Backend code change
 
 ```bash
 docker compose up -d --build api
+```
+
+### Data update (new GEDCOM files)
+
+```bash
+# 1. locally — re-extract JSON
+python tools/gedcom-to-json.py --mode update
+
+# 2. copy data/output/ to server
+rsync -avz data/output/ user@yourserver:/path/to/sgi/data/output/
+
+# 3. on server — reimport changed contributors
+docker compose exec api python tools/import_to_db.py --mode update
+```
+
+### Frontend change
+
+```bash
+yarn build
+rsync -avz --delete web/dist/ user@yourserver:/var/www/sgi/
+```
+
+---
+
+## 6. Local Development
+
+Start the Vite dev server (accessible on the local network):
+
+```bash
+yarn dev
+```
+
+The dev server proxies API calls to `SGI_API_HOST` (set in `.env`) and hot-reloads on file changes.
+
+Preview the production build locally:
+
+```bash
+yarn build && yarn preview
 ```
