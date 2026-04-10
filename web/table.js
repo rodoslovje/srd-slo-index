@@ -277,21 +277,21 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         if (row.husband_name) params.set('n', row.husband_name);
         if (row.husband_surname) params.set('sn', row.husband_surname);
         params.set('ex', '1');
-        html += `<td><a href="?${params.toString()}" target="_blank" rel="noopener" class="name-link">${row[col]}</a></td>`;
+        html += `<td><a href="?${params.toString()}" class="name-link" data-spa-nav>${row[col]}</a></td>`;
       } else if ((col === 'wife_name' || col === 'wife_surname') && row[col]) {
         const params = new URLSearchParams();
         params.set('t', 'birth');
         if (row.wife_name) params.set('n', row.wife_name);
         if (row.wife_surname) params.set('sn', row.wife_surname);
         params.set('ex', '1');
-        html += `<td><a href="?${params.toString()}" target="_blank" rel="noopener" class="name-link">${row[col]}</a></td>`;
+        html += `<td><a href="?${params.toString()}" class="name-link" data-spa-nav>${row[col]}</a></td>`;
       } else if ((col === 'name' || col === 'surname') && row[col] && row.date_of_death !== undefined) {
         const params = new URLSearchParams();
         params.set('t', 'birth');
         if (row.name) params.set('n', row.name);
         if (row.surname) params.set('sn', row.surname);
         params.set('ex', '1');
-        html += `<td><a href="?${params.toString()}" target="_blank" rel="noopener" class="name-link">${row[col]}</a></td>`;
+        html += `<td><a href="?${params.toString()}" class="name-link" data-spa-nav>${row[col]}</a></td>`;
       } else if (col === 'children' && (row.children_list || row[col])) {
         let formattedList = [];
         let count = 0;
@@ -314,7 +314,7 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
               if (c.surname && c.surname !== row.husband_surname) childDisplay += ` ${c.surname}`;
               if (c.year) childDisplay += ` *${c.year}`;
 
-              return `<a href="?${params.toString()}" target="_blank" rel="noopener">${childDisplay}</a>`;
+              return `<a href="?${params.toString()}" data-spa-nav>${childDisplay}</a>`;
             });
           } catch (e) {
             console.error("Failed to parse JSON for children", e);
@@ -343,7 +343,7 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
             if (yearPart) params.set('dob', yearPart);
             params.set('ex', '1');
 
-            return `<a href="?${params.toString()}" target="_blank" rel="noopener">${c}</a>`;
+            return `<a href="?${params.toString()}" data-spa-nav>${c}</a>`;
           });
         }
         html += `<td>
@@ -389,7 +389,7 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
               if (s) bParams.set('sn', s);
               if (y) bParams.set('dob', y);
               bParams.set('ex', '1');
-              return `<a href="?${bParams.toString()}" target="_blank" rel="noopener" class="name-link">${display}</a>`;
+              return `<a href="?${bParams.toString()}" class="name-link" data-spa-nav>${display}</a>`;
             };
 
             const fDisplay = [fName, fSur].filter(Boolean).join(' ') + fYear;
@@ -399,7 +399,7 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
             if (mDisplay) parentsCount++;
 
             let htmlStr = `<div class="parent-group" style="margin-bottom: 8px;">
-              <a href="?${famParams.toString()}" target="_blank" rel="noopener" class="name-link" style="font-weight: 600;">${t(labelKey)}:</a><br>`;
+              <a href="?${famParams.toString()}" class="name-link" data-spa-nav style="font-weight: 600;">${t(labelKey)}:</a><br>`;
             if (fDisplay) htmlStr += `${getBirthLink(fName, fSur, father.year, fDisplay)}<br>`;
             if (mDisplay) htmlStr += `${getBirthLink(mName, mSur, mother.year, mDisplay)}`;
             htmlStr += `</div>`;

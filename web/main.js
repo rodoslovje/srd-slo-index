@@ -274,19 +274,28 @@ async function init() {
 
 init();
 
-// --- Browser back/forward navigation ---
-window.addEventListener('popstate', () => {
-  const urlParams = new URLSearchParams(window.location.search);
+// --- SPA navigation (shared by link clicks and popstate) ---
+function navigateToURL(urlSearch) {
+  const urlParams = new URLSearchParams(urlSearch);
   const urlT = urlParams.get('t') || 'general';
   const tabMap = { general: 'tab-general', birth: 'tab-birth', family: 'tab-family', death: 'tab-death', contributors: 'tab-contributors' };
   const targetTab = tabMap[urlT] || 'tab-general';
-
-  // Switch tab silently (without updating URL again)
   isInitializing = true;
   document.querySelector(`.tab-btn[data-target="${targetTab}"]`)?.click();
   isInitializing = false;
-
-  // Clear forms then restore from the popped URL
   clearAllSearchForms();
   restoreFromURL();
+}
+
+document.addEventListener('click', (e) => {
+  const link = e.target.closest('[data-spa-nav]');
+  if (!link) return;
+  e.preventDefault();
+  const url = new URL(link.href, window.location.href);
+  history.pushState(null, '', url);
+  navigateToURL(url.search);
+});
+
+window.addEventListener('popstate', () => {
+  navigateToURL(window.location.search);
 });
