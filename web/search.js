@@ -53,7 +53,8 @@ export function setupGeneralSearch() {
     const dateToVal = document.getElementById('general-date_to')?.value || '';
     const placeVal = document.getElementById('general-place')?.value || '';
     const contributorVal = document.getElementById('general-contributor')?.value || '';
-    const exactChecked = document.getElementById('general-exact')?.checked || false;
+    const approxExists = document.getElementById('general-exact-approx');
+    const exactChecked = approxExists ? document.getElementById('general-exact')?.checked : true;
     const hasLinkChecked = document.getElementById('general-has_link')?.checked || false;
 
     let html = `
@@ -91,10 +92,16 @@ export function setupGeneralSearch() {
         <input type="checkbox" id="general-has_link"${hasLinkChecked ? ' checked' : ''} />
         <span>${t('has_link')}</span>
       </label>
-      <label class="exact-toggle">
-        <input type="checkbox" id="general-exact"${exactChecked ? ' checked' : ''} />
-        <span>${t('exact_search')}</span>
-      </label>
+      <div class="exact-radio-group">
+        <label class="exact-toggle">
+          <input type="radio" name="general-exact-mode" id="general-exact-approx" value="approx"${!exactChecked ? ' checked' : ''} />
+          <span>${t('approximate_search')}</span>
+        </label>
+        <label class="exact-toggle">
+          <input type="radio" name="general-exact-mode" id="general-exact" value="exact"${exactChecked ? ' checked' : ''} />
+          <span>${t('exact_search')}</span>
+        </label>
+      </div>
       <button id="btn-general-search">${t('search_btn')}</button>
     `;
     container.innerHTML = html;
@@ -143,7 +150,7 @@ async function performGeneralSearch() {
   const hasTextParam = ['q', 'name', 'surname', 'date_from', 'date_to', 'place', 'contributor'].some(k => params[k]);
   if (!hasTextParam) return;
 
-  const exact = document.getElementById('general-exact')?.checked || false;
+  const exact = document.getElementById('general-exact')?.checked ?? true;
   if (exact) params.exact = 'true';
 
   const hasLink = document.getElementById('general-has_link')?.checked || false;
@@ -155,7 +162,7 @@ async function performGeneralSearch() {
     const shortKey = PARAM_MAP[key] || key;
     shortParams[shortKey] = value;
   }
-  if (exact) shortParams.ex = '1';
+  if (!exact) shortParams.ex = '0';
   if (hasLink) shortParams.hl = '1';
 
   pushOrReplaceURL(shortParams);
@@ -207,7 +214,8 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
   const hasLinkId = `${prefix}has_link`;
 
   function renderFields() {
-    const exactChecked = document.getElementById(exactId)?.checked || false;
+    const approxExists = document.getElementById(`${prefix}exact-approx`);
+    const exactChecked = approxExists ? document.getElementById(exactId)?.checked : true;
     const hasLinkChecked = document.getElementById(hasLinkId)?.checked || false;
     let html = '';
     columns.filter(col => !DISPLAY_ONLY_COLUMNS.has(col)).forEach(col => {
@@ -238,10 +246,16 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
                <input type="checkbox" id="${hasLinkId}"${hasLinkChecked ? ' checked' : ''} />
                <span>${t('has_link')}</span>
              </label>`;
-    html += `<label class="exact-toggle">
-               <input type="checkbox" id="${exactId}"${exactChecked ? ' checked' : ''} />
-               <span>${t('exact_search')}</span>
-             </label>`;
+    html += `<div class="exact-radio-group">
+               <label class="exact-toggle">
+                 <input type="radio" name="${prefix}exact-mode" id="${prefix}exact-approx" value="approx"${!exactChecked ? ' checked' : ''} />
+                 <span>${t('approximate_search')}</span>
+               </label>
+               <label class="exact-toggle">
+                 <input type="radio" name="${prefix}exact-mode" id="${exactId}" value="exact"${exactChecked ? ' checked' : ''} />
+                 <span>${t('exact_search')}</span>
+               </label>
+             </div>`;
     html += `<button id="btn-adv-search-${urlType}">${t('search_btn')}</button>`;
     container.innerHTML = html;
   }
@@ -266,9 +280,9 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
       return;
     }
 
-    const exact = document.getElementById(exactId)?.checked || false;
+    const exact = document.getElementById(exactId)?.checked ?? true;
     const hasLink = document.getElementById(hasLinkId)?.checked || false;
-    const shortParams = { t: urlType, ...(exact ? { ex: '1' } : {}), ...(hasLink ? { hl: '1' } : {}) };
+    const shortParams = { t: urlType, ...(!exact ? { ex: '0' } : {}), ...(hasLink ? { hl: '1' } : {}) };
     for (const [field, val] of Object.entries(fieldParams)) {
       shortParams[PARAM_MAP[field] || field] = val;
     }
@@ -379,7 +393,7 @@ export function getTabURLParams(tabType) {
       const val = document.getElementById(`general-${f}`)?.value.trim();
       if (val) out[f === 'query' ? 'q' : (PARAM_MAP[f] || f)] = val;
     });
-    if (document.getElementById('general-exact')?.checked) out.ex = '1';
+    if (!document.getElementById('general-exact')?.checked) out.ex = '0';
     if (document.getElementById('general-has_link')?.checked) out.hl = '1';
   } else if (tabType === 'birth' || tabType === 'family' || tabType === 'death') {
     const columns = tabType === 'birth' ? birthColumns : tabType === 'family' ? familyColumns : deathColumns;
@@ -393,7 +407,7 @@ export function getTabURLParams(tabType) {
         if (toVal) out[PARAM_MAP[toKey] || toKey] = toVal;
       }
     });
-    if (document.getElementById(`${prefix}exact`)?.checked) out.ex = '1';
+    if (!document.getElementById(`${prefix}exact`)?.checked) out.ex = '0';
     if (document.getElementById(`${prefix}has_link`)?.checked) out.hl = '1';
   }
   return out;
@@ -404,10 +418,12 @@ export function clearAllSearchForms() {
     const el = document.getElementById(id);
     if (el) { el.value = ''; const cb = el.nextElementSibling; if (cb?.matches('.clear-btn')) cb.style.display = 'none'; }
   });
-  ['general-exact', 'general-has_link'].forEach(id => { const el = document.getElementById(id); if (el) el.checked = false; });
+  const genHasLink = document.getElementById('general-has_link'); if (genHasLink) genHasLink.checked = false;
+  const genExact = document.getElementById('general-exact'); if (genExact) genExact.checked = true;
   ['birth', 'family', 'death'].forEach(type => {
     document.querySelectorAll(`#adv-${type}-search-controls input`).forEach(el => {
       if (el.type === 'checkbox') el.checked = false;
+      if (el.type === 'radio' && el.value === 'exact') el.checked = true;
       else { el.value = ''; const cb = el.nextElementSibling; if (cb?.matches('.clear-btn')) cb.style.display = 'none'; }
     });
   });
@@ -435,10 +451,10 @@ export function restoreFromURL() {
         }
       }
     });
-    if (params.get('ex') === '1') {
-      const cb = document.getElementById('general-exact');
-      if (cb) cb.checked = true;
-    }
+    const exactRadio = document.getElementById('general-exact');
+    const approxRadio = document.getElementById('general-exact-approx');
+    if (params.get('ex') === '0') { if (approxRadio) approxRadio.checked = true; }
+    else { if (exactRadio) exactRadio.checked = true; }
     if (params.get('hl') === '1') {
       const cb = document.getElementById('general-has_link');
       if (cb) cb.checked = true;
@@ -473,10 +489,10 @@ export function restoreFromURL() {
         }
       }
     });
-    if (params.get('ex') === '1') {
-      const cb = document.getElementById(`${prefix}exact`);
-      if (cb) cb.checked = true;
-    }
+    const exactRadio = document.getElementById(`${prefix}exact`);
+    const approxRadio = document.getElementById(`${prefix}exact-approx`);
+    if (params.get('ex') === '0') { if (approxRadio) approxRadio.checked = true; }
+    else { if (exactRadio) exactRadio.checked = true; }
     if (params.get('hl') === '1') {
       const cb = document.getElementById(`${prefix}has_link`);
       if (cb) { cb.checked = true; hasCriteria = true; }

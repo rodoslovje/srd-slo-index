@@ -245,7 +245,7 @@ h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 
   flex-wrap: wrap;
 }
 
-.search-box input:not([type="checkbox"]),
+.search-box input:not([type="checkbox"]):not([type="radio"]),
 .search-box select,
 .search-box button:not(.clear-btn) {
   padding: 10px;
@@ -256,7 +256,8 @@ h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 
 }
 
 .search-box button:not(.clear-btn),
-.search-box .exact-toggle {
+.search-box .exact-toggle,
+.search-box .exact-radio-group {
   flex-basis: 100%;
 }
 
@@ -319,7 +320,15 @@ h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 
   opacity: 1;
 }
 
-/* --- Exact search toggle --- */
+/* --- Exact/Approximate search toggle --- */
+.exact-radio-group {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  align-items: center;
+}
+
 .exact-toggle {
   display: flex;
   align-items: center;
@@ -331,7 +340,8 @@ h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 
   white-space: nowrap;
 }
 
-.exact-toggle input[type="checkbox"] {
+.exact-toggle input[type="checkbox"],
+.exact-toggle input[type="radio"] {
   cursor: pointer;
   width: 15px;
   height: 15px;
@@ -645,7 +655,7 @@ h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 
   .search-box {
     flex-direction: column;
   }
-  .search-box input:not([type="checkbox"]), .search-box select, .search-box button:not(.clear-btn) {
+  .search-box input:not([type="checkbox"]):not([type="radio"]), .search-box select, .search-box button:not(.clear-btn) {
     width: 100%;
   }
 }
