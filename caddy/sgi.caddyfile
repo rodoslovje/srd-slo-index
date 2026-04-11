@@ -1,0 +1,20 @@
+# Slovenian Genealogical Index — Caddy site block
+# Place this file in the Caddy conf.d/ directory on your server.
+# Replace the domain names to match your environment.
+
+# Frontend — serves the built Vite app
+yourdomain.com {
+    root * /var/www/sgi
+    file_server
+    try_files {path} /index.html
+    encode gzip
+}
+
+# Backend API — reverse proxy to the Docker container
+api.yourdomain.com {
+    reverse_proxy sgi_api:8000 {
+        header_up Host {host}
+    }
+    header Access-Control-Allow-Origin "https://yourdomain.com"
+    encode gzip
+}

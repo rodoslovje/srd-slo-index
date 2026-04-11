@@ -4,13 +4,13 @@ A searchable web application for genealogical data with a PostgreSQL database, P
 
 ## Architecture
 
-| Layer | Technology |
-|---|---|
-| Database | PostgreSQL 16 (with `pg_trgm` for fuzzy search) |
-| Backend API | Python 3.11 / FastAPI / Uvicorn |
-| Frontend | Vanilla JS / HTML / CSS (Vite build) |
-| Reverse proxy | Caddy 2 |
-| Containerisation | Docker & Docker Compose |
+| Layer            | Technology                                      |
+| ---------------- | ----------------------------------------------- |
+| Database         | PostgreSQL 16 (with `pg_trgm` for fuzzy search) |
+| Backend API      | Python 3.11 / FastAPI / Uvicorn                 |
+| Frontend         | Vanilla JS / HTML / CSS (Vite build)            |
+| Reverse proxy    | Caddy 2                                         |
+| Containerisation | Docker & Docker Compose                         |
 
 ```
 Internet → Caddy → /          → static files (frontend dist/)
@@ -23,20 +23,66 @@ Internet → Caddy → /          → static files (frontend dist/)
 
 ## Prerequisites
 
-| Tool | Notes |
-|---|---|
-| Docker + Docker Compose | v2+ (`docker compose` command) |
-| Node.js + Yarn | For building the frontend |
-| Python 3 | For local data extraction only |
-| Caddy 2 | As the reverse proxy / web server on the host |
+| Tool                    | Notes                                         |
+| ----------------------- | --------------------------------------------- |
+| Docker + Docker Compose | v2+ (`docker compose` command)                |
+| Node.js + Yarn          | For building the frontend                     |
+| Python 3                | For local data extraction only                |
+| Caddy 2                 | As the reverse proxy / web server on the host |
 
 ---
 
 ## 1. Data Extraction (Run Locally)
 
-Extract JSON records from your GEDCOM `.ged` files before importing them into the database.
+### 1.0 Data Folder Structure
 
-1. Place `.ged` files in `data/filtered/` (create the directory if needed).
+The `data/` directory is gitignored. Create it manually with the following layout:
+
+```
+data/
+├── input/       # Raw .ged files as received from contributors
+├── filtered/    # Cleaned .ged files after privacy filtering (see step 1.1)
+└── output/      # JSON files extracted for DB import + metadata.json
+```
+
+```bash
+mkdir -p data/input data/filtered data/output
+```
+
+### 1.1 GEDCOM Cleanup (Recommended)
+
+Before importing, GEDCOM files should be stripped of living persons and persons who died within the last 20 years to protect privacy.
+
+Use [ged-tools](https://github.com/rodoslovje/ged-tools), which includes a `srd_index_cleanup` preset with SGI-specific rules.
+
+```bash
+# Clone and set up ged-tools (one-time)
+git clone https://github.com/rodoslovje/ged-tools.git
+cd ged-tools
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+Run the cleanup for each contributor file:
+
+```bash
+# From inside the ged-tools directory
+python tools/gedcom_cleaner.py \
+  /path/to/data/input/contributor.ged \
+  /path/to/data/filtered/contributor.ged \
+  --warn --stats --preset index_cleanup_sgi
+```
+
+Repeat for each contributor file. The cleaned files in `data/filtered/` are then ready for JSON extraction.
+
+> The `index_cleanup_sgi` preset: standardises dates and places, removes records with no valid names, and anonymises persons likely still living (within 100 years of birth) or who died within the last 20 years.
+
+### 1.2 JSON Extraction
+
+Extract JSON records from the cleaned GEDCOM files into the format required for DB import.
+
+1. Place cleaned `.ged` files in `data/filtered/` (either copied manually or produced by step 1.1).
 2. Create and activate a Python virtual environment:
    ```bash
    python -m venv .venv
@@ -44,13 +90,15 @@ Extract JSON records from your GEDCOM `.ged` files before importing them into th
    pip install -r tools/requirements.txt
    ```
 3. Run the extraction script:
+
    ```bash
    python tools/gedcom-to-json.py --mode update
    ```
+
    Output JSON files and `data/output/metadata.json` are written to `data/output/`.
 
    **Arguments:**
-   - `--mode update` *(default)* — skips files already up-to-date
+   - `--mode update` _(default)_ — skips files already up-to-date
    - `--mode full` — reprocesses all files
 
 ---
@@ -94,6 +142,7 @@ docker compose up -d --build
 ```
 
 This starts two containers:
+
 - `sgi_postgres` — PostgreSQL database (data persisted in `postgres_data` Docker volume)
 - `sgi_api` — FastAPI application on internal port 8000
 
@@ -112,30 +161,82 @@ docker compose exec api python tools/import_to_db.py --mode update
 ```
 
 **Arguments:**
-- `--mode update` *(default)* — only reimports contributors whose data has changed
+
+- `--mode update` _(default)_ — only reimports contributors whose data has changed
 - `--mode full` — reimports all contributors
 - `--drop-tables` — drops and recreates all tables first (full reimport)
 - `--force-births` / `--force-families` / `--force-deaths` — force reimport of specific record types
 
 ---
 
-## 3. Caddy Configuration
+## 3. Caddy Setup (Docker)
 
-Caddy acts as the reverse proxy for the API and serves the static frontend files.
+Caddy runs as a Docker container on the same `caddy_net` network as the app. It handles TLS automatically and resolves backend containers by name. A `conf.d/` folder pattern lets each service ship its own `.caddyfile` snippet that Caddy imports on startup.
 
-### 3.1 Install Caddy
+### 3.1 Server directory layout
 
-```bash
-# Debian/Ubuntu
-sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
-sudo apt update && sudo apt install caddy
+This repository ships ready-made Caddy config files in the `caddy/` directory:
+
+```
+caddy/
+├── docker-compose.yml   # Caddy container definition
+├── Caddyfile            # Root config — imports conf.d/
+└── sgi.caddyfile        # This project's site block (copy to conf.d/ on server)
 ```
 
-### 3.2 Caddyfile
+Copy the `caddy/` directory to your server once (shared by all services):
 
-Create or edit `/etc/caddy/Caddyfile`:
+```bash
+scp -r caddy/ user@yourserver:/srv/caddy
+```
+
+On the server, create the `conf.d/` directory and add the SGI snippet:
+
+```bash
+mkdir -p /srv/caddy/conf.d
+cp /srv/caddy/sgi.caddyfile /srv/caddy/conf.d/sgi.caddyfile
+```
+
+The final server layout:
+
+```
+/srv/caddy/
+├── docker-compose.yml      # Caddy container (caddy/docker-compose.yml)
+├── Caddyfile               # Root config (caddy/Caddyfile)
+├── conf.d/                 # Per-service snippets — one .caddyfile per project
+│   └── sgi.caddyfile       # ← copied from caddy/sgi.caddyfile
+└── data/                   # Docker volume mount for Caddy TLS certs (auto-created)
+```
+
+### 3.2 Root Caddyfile
+
+`caddy/Caddyfile` imports all snippets from `conf.d/` automatically. No edits needed when adding new services — just drop a file in `conf.d/` and reload.
+
+### 3.3 Caddy docker-compose.yml
+
+`caddy/docker-compose.yml` defines the Caddy container. Key points:
+
+- Ports 80/443 exposed to the internet
+- `conf.d/` bind-mounted read-only — edit files on the host, reload Caddy to apply
+- TLS certificate data stored in a named Docker volume (`caddy_data`) so certs survive container restarts
+- `/var/www` bind-mounted read-only for static sites
+
+Start Caddy:
+
+```bash
+cd /srv/caddy
+docker compose up -d
+```
+
+### 3.4 Per-service snippet (this project)
+
+This repository ships a ready-made snippet at `caddy/sgi.caddyfile`. Copy it to the server and customise the domain names:
+
+```bash
+scp caddy/sgi.caddyfile user@yourserver:/srv/caddy/conf.d/sgi.caddyfile
+```
+
+Edit the copy on the server — replace `yourdomain.com` and `api.yourdomain.com`:
 
 ```caddyfile
 # Frontend — serves the built Vite app
@@ -156,17 +257,24 @@ api.yourdomain.com {
 }
 ```
 
-> **Note:** Replace `yourdomain.com` and `api.yourdomain.com` with your actual domains. Caddy obtains and renews TLS certificates from Let's Encrypt automatically.
+> Caddy resolves `sgi_api` by container name because both the Caddy container and the app containers are on `caddy_net`.
 
-> **Docker network:** For Caddy to resolve `sgi_api` by container name, Caddy must be on `caddy_net`. Either run Caddy inside a container on that network, or use the container's published port (e.g. `localhost:8000`) if Caddy runs on the host.
+> TLS certificates are obtained from Let's Encrypt automatically — no extra configuration needed.
 
-Reload Caddy after any config change:
+### 3.5 Reload Caddy after config changes
 
 ```bash
-sudo systemctl reload caddy
-# or, to validate first:
-caddy validate --config /etc/caddy/Caddyfile && sudo systemctl reload caddy
+docker exec caddy caddy reload --config /etc/caddy/Caddyfile
+
+# Validate before reloading:
+docker exec caddy caddy validate --config /etc/caddy/Caddyfile && \
+  docker exec caddy caddy reload --config /etc/caddy/Caddyfile
 ```
+
+### 3.6 Adding another service later
+
+1. Drop a new `myservice.caddyfile` into `/srv/caddy/conf.d/`.
+2. Reload Caddy (step 3.5). No changes to the root `Caddyfile` or Caddy container needed.
 
 ---
 
@@ -220,13 +328,20 @@ docker compose up -d --build api
 ### Data update (new GEDCOM files)
 
 ```bash
-# 1. locally — re-extract JSON
+# 1. locally — clean raw GEDCOM files (remove living persons / recent deaths)
+#    see Section 1.1 for ged-tools setup; run from inside the ged-tools directory
+python tools/gedcom_cleaner.py \
+  /path/to/srd-slo-index/data/input/contributor.ged \
+  /path/to/srd-slo-index/data/filtered/contributor.ged \
+  --preset srd_index_cleanup
+
+# 2. locally — re-extract JSON from cleaned files
 python tools/gedcom-to-json.py --mode update
 
-# 2. copy data/output/ to server
+# 3. copy data/output/ to server
 rsync -avz data/output/ user@yourserver:/path/to/sgi/data/output/
 
-# 3. on server — reimport changed contributors
+# 4. on server — reimport changed contributors
 docker compose exec api python tools/import_to_db.py --mode update
 ```
 
