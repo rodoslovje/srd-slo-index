@@ -25,10 +25,10 @@ Internet → Caddy → /          → static files (frontend dist/)
 
 | Tool                    | Notes                                         |
 | ----------------------- | --------------------------------------------- |
-| Docker + Docker Compose | v2+ (`docker compose` command)                |
-| Node.js + Yarn          | For building the frontend                     |
-| Python 3                | For local data extraction only                |
-| Caddy 2                 | As the reverse proxy / web server on the host |
+| Docker + Docker Compose | v2+ (`docker compose` command)                           |
+| Node.js + Yarn          | For building the frontend                                |
+| ged-tools               | For GEDCOM cleanup and JSON extraction (Python 3 based)  |
+| Caddy 2                 | As the reverse proxy / web server on the host            |
 
 ---
 
@@ -82,20 +82,17 @@ Repeat for each contributor file. The cleaned files in `data/filtered/` are then
 
 Extract JSON records from the cleaned GEDCOM files into the format required for DB import.
 
+The extraction script has moved to [ged-tools](https://github.com/rodoslovje/ged-tools) — the same repo used for cleanup in step 1.1. If you have already cloned and set up ged-tools, no additional setup is needed.
+
 1. Place cleaned `.ged` files in `data/filtered/` (either copied manually or produced by step 1.1).
-2. Create and activate a Python virtual environment:
-   ```bash
-   python -m venv .venv
-   source .venv/bin/activate
-   pip install -r tools/requirements.txt
-   ```
-3. Run the extraction script:
+2. Run the extraction script from inside the ged-tools directory:
 
    ```bash
-   python tools/gedcom-to-json.py --mode update
+   # From inside the ged-tools directory (venv already active from step 1.1)
+   python tools/gedcom-to-json.py --mode update --data-dir /path/to/srd-slo-index/data
    ```
 
-   Output JSON files and `data/output/metadata.json` are written to `data/output/`.
+   Output JSON files and `metadata.json` are written to `data/output/`.
 
    **Arguments:**
    - `--mode update` _(default)_ — skips files already up-to-date
@@ -335,8 +332,8 @@ python tools/gedcom_cleaner.py \
   /path/to/srd-slo-index/data/filtered/contributor.ged \
   --preset srd_index_cleanup
 
-# 2. locally — re-extract JSON from cleaned files
-python tools/gedcom-to-json.py --mode update
+# 2. locally — re-extract JSON from cleaned files (run from inside ged-tools directory)
+python tools/gedcom-to-json.py --mode update --data-dir /path/to/srd-slo-index/data
 
 # 3. copy data/output/ to server
 rsync -avz data/output/ user@yourserver:/path/to/sgi/data/output/
