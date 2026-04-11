@@ -146,7 +146,6 @@ def get_name_surname(individual):
 
 
 MATRICULA_RE = re.compile(r"https?://data\.matricula-online\.eu/[^\"\s<]+")
-_MATRICULA_LANG_RE = re.compile(r"(https?://data\.matricula-online\.eu/)[a-z]{2}(/)")
 GENEANET_CEMETERY_RE = re.compile(
     r"https?://[a-z]{2}\.geneanet\.org/(?:cemetery|friedhof)[^\"\s<]*"
 )
@@ -164,9 +163,9 @@ FAMILYSEARCH_RE = re.compile(
 
 
 def _normalize_matricula_url(url):
-    """Normalize matricula URL to /en/ locale to avoid language-variant duplicates."""
-    url = url.replace("http://", "https://")
-    return _MATRICULA_LANG_RE.sub(r"\1en\2", url)
+    """Normalize matricula URL: upgrade http to https only. Keep the original language
+    code so pages load correctly regardless of country (/de/oesterreich, /sl/slovenia, etc.)."""
+    return url.replace("http://", "https://")
 
 
 def _find_matricula_url(text):
@@ -400,26 +399,15 @@ def _determine_link_type(url, context=None):
                 text_to_search = " ".join([m[0] or m[1] for m in headings])
 
                 types = []
-                if any(
-                    kw in text_to_search
-                    for kw in ["taufbuch", "krstna knjiga", "krsti", "taufen"]
-                ):
+                BIRTH_KW = ["taufbuch", "krstna knjiga", "krsti", "taufen", "baptisms", "baptismal register"]
+                DEATH_KW = ["sterbebuch", "mrliška knjiga", "mrliči", "sterbefälle", "deaths", "burial register", "burials"]
+                MARRIAGE_KW = ["trauungsbuch", "poročna knjiga", "poroke", "trauungen", "kopulationsbuch", "marriages", "marriage register"]
+
+                if any(kw in text_to_search for kw in BIRTH_KW):
                     types.append("birth")
-                if any(
-                    kw in text_to_search
-                    for kw in ["sterbebuch", "mrliška knjiga", "mrliči", "sterbefälle"]
-                ):
+                if any(kw in text_to_search for kw in DEATH_KW):
                     types.append("death")
-                if any(
-                    kw in text_to_search
-                    for kw in [
-                        "trauungsbuch",
-                        "poročna knjiga",
-                        "poroke",
-                        "trauungen",
-                        "kopulationsbuch",
-                    ]
-                ):
+                if any(kw in text_to_search for kw in MARRIAGE_KW):
                     types.append("marriage")
 
                 # If headings didn't yield anything, try the whole HTML but strip <a> tags
@@ -428,31 +416,11 @@ def _determine_link_type(url, context=None):
                     clean_html = re.sub(
                         r"<a\s+[^>]*>.*?</a>", "", html, flags=re.DOTALL
                     )
-                    if any(
-                        kw in clean_html
-                        for kw in ["taufbuch", "krstna knjiga", "krsti", "taufen"]
-                    ):
+                    if any(kw in clean_html for kw in BIRTH_KW):
                         types.append("birth")
-                    if any(
-                        kw in clean_html
-                        for kw in [
-                            "sterbebuch",
-                            "mrliška knjiga",
-                            "mrliči",
-                            "sterbefälle",
-                        ]
-                    ):
+                    if any(kw in clean_html for kw in DEATH_KW):
                         types.append("death")
-                    if any(
-                        kw in clean_html
-                        for kw in [
-                            "trauungsbuch",
-                            "poročna knjiga",
-                            "poroke",
-                            "trauungen",
-                            "kopulationsbuch",
-                        ]
-                    ):
+                    if any(kw in clean_html for kw in MARRIAGE_KW):
                         types.append("marriage")
 
                 _URL_CACHE[base_url] = types
