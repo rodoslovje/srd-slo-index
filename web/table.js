@@ -241,7 +241,15 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
             } else if (url.includes('sistory.si') && url.includes('popisi')) {
               icon = '📋';
               titleText = t('icon_census');
+            } else if (url.includes('dlib.si')) {
+              icon = '📰';
+              titleText = t('icon_dlib');
             }
+
+            try {
+              const domain = new URL(url).hostname.replace(/^www\./, '');
+              titleText = `${titleText} - ${domain}`;
+            } catch (e) {}
 
             const href = url.includes('matricula-online.eu')
               ? url.replace(/\/(en|sl)\//, `/${getCurrentLang()}/`)

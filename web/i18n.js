@@ -79,6 +79,7 @@ const translations = {
     icon_census: 'Census',
     icon_military: 'Casualty of the war',
     icon_matricula: 'Matricula Online',
+    icon_dlib: 'Digital Library of Slovenia',
 
     // Society name (used in intro logo)
     society_name: 'Slovenian Genealogy Society',
@@ -167,6 +168,7 @@ const translations = {
     icon_census: 'Popis prebivalstva',
     icon_military: 'Žrtev vojne',
     icon_matricula: 'Matricula Online',
+    icon_dlib: 'Digitalna knjižnica Slovenije',
 
     // Society name (used in intro logo)
     society_name: 'Slovensko rodoslovno društvo',
