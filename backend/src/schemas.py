@@ -23,7 +23,6 @@ class FamilyBase(BaseModel):
     husband_surname: str
     wife_name: str
     wife_surname: str
-    children: Optional[str] = None
     children_list: Optional[str] = None
     husband_parents: Optional[str] = None
     wife_parents: Optional[str] = None

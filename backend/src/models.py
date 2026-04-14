@@ -22,7 +22,6 @@ class Family(Base):
     husband_surname = Column(Text, index=True)
     wife_name = Column(Text, index=True)
     wife_surname = Column(Text, index=True)
-    children = Column(Text)
     children_list = Column(Text)
     husband_parents = Column(Text)
     wife_parents = Column(Text)

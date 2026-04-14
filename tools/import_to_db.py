@@ -47,7 +47,7 @@ def setup_full(db):
             id SERIAL PRIMARY KEY, name TEXT, surname TEXT, date_of_birth TEXT, place_of_birth TEXT, contributor TEXT, links TEXT
         );
         CREATE TABLE families (
-            id SERIAL PRIMARY KEY, husband_name TEXT, husband_surname TEXT, wife_name TEXT, wife_surname TEXT, children TEXT, children_list TEXT, husband_parents TEXT, wife_parents TEXT, date_of_marriage TEXT, place_of_marriage TEXT, contributor TEXT, links TEXT
+            id SERIAL PRIMARY KEY, husband_name TEXT, husband_surname TEXT, wife_name TEXT, wife_surname TEXT, children_list TEXT, husband_parents TEXT, wife_parents TEXT, date_of_marriage TEXT, place_of_marriage TEXT, contributor TEXT, links TEXT
         );
         CREATE TABLE deaths (
             id SERIAL PRIMARY KEY, name TEXT, surname TEXT, date_of_death TEXT, place_of_death TEXT, contributor TEXT, links TEXT
@@ -57,7 +57,7 @@ def setup_full(db):
         CREATE INDEX idx_birth_surname_trgm ON births USING gist (surname gist_trgm_ops);
         CREATE INDEX idx_family_h_surname_trgm ON families USING gist (husband_surname gist_trgm_ops);
         CREATE INDEX idx_family_w_surname_trgm ON families USING gist (wife_surname gist_trgm_ops);
-        CREATE INDEX idx_family_children_trgm ON families USING gist (children gist_trgm_ops);
+        CREATE INDEX idx_family_children_list_trgm ON families USING gist (children_list gist_trgm_ops);
         CREATE INDEX idx_death_name_trgm ON deaths USING gist (name gist_trgm_ops);
         CREATE INDEX idx_death_surname_trgm ON deaths USING gist (surname gist_trgm_ops);
     """
@@ -82,7 +82,7 @@ def setup_update(db):
             id SERIAL PRIMARY KEY, name TEXT, surname TEXT, date_of_birth TEXT, place_of_birth TEXT, contributor TEXT, links TEXT
         );
         CREATE TABLE IF NOT EXISTS families (
-            id SERIAL PRIMARY KEY, husband_name TEXT, husband_surname TEXT, wife_name TEXT, wife_surname TEXT, children TEXT, date_of_marriage TEXT, place_of_marriage TEXT, contributor TEXT, links TEXT
+            id SERIAL PRIMARY KEY, husband_name TEXT, husband_surname TEXT, wife_name TEXT, wife_surname TEXT, date_of_marriage TEXT, place_of_marriage TEXT, contributor TEXT, links TEXT
         );
         CREATE TABLE IF NOT EXISTS deaths (
             id SERIAL PRIMARY KEY, name TEXT, surname TEXT, date_of_death TEXT, place_of_death TEXT, contributor TEXT, links TEXT
@@ -107,8 +107,8 @@ def setup_update(db):
             END IF;
         END $$;
 
-        ALTER TABLE families ADD COLUMN IF NOT EXISTS children TEXT;
         ALTER TABLE families DROP COLUMN IF EXISTS children_json;
+        ALTER TABLE families DROP COLUMN IF EXISTS children;
         ALTER TABLE families ADD COLUMN IF NOT EXISTS children_list TEXT;
         ALTER TABLE families ADD COLUMN IF NOT EXISTS husband_parents TEXT;
         ALTER TABLE families ADD COLUMN IF NOT EXISTS wife_parents TEXT;
@@ -122,7 +122,7 @@ def setup_update(db):
         CREATE INDEX IF NOT EXISTS idx_birth_surname_trgm ON births USING gist (surname gist_trgm_ops);
         CREATE INDEX IF NOT EXISTS idx_family_h_surname_trgm ON families USING gist (husband_surname gist_trgm_ops);
         CREATE INDEX IF NOT EXISTS idx_family_w_surname_trgm ON families USING gist (wife_surname gist_trgm_ops);
-        CREATE INDEX IF NOT EXISTS idx_family_children_trgm ON families USING gist (children gist_trgm_ops);
+        CREATE INDEX IF NOT EXISTS idx_family_children_list_trgm ON families USING gist (children_list gist_trgm_ops);
         CREATE INDEX IF NOT EXISTS idx_death_name_trgm ON deaths USING gist (name gist_trgm_ops);
         CREATE INDEX IF NOT EXISTS idx_death_surname_trgm ON deaths USING gist (surname gist_trgm_ops);
     """
@@ -253,7 +253,6 @@ def import_contributor(
                 if isinstance(family.get("links"), list):
                     family["links"] = json.dumps(family["links"], ensure_ascii=False)
                 family.setdefault("links", None)
-                family.setdefault("children", None)
                 family.setdefault("children_list", None)
                 family.setdefault("husband_parents", None)
                 family.setdefault("wife_parents", None)
@@ -272,9 +271,9 @@ def import_contributor(
                 db.execute(
                     text(
                         "INSERT INTO families (husband_name, husband_surname, wife_name, wife_surname, "
-                        "children, children_list, husband_parents, wife_parents, date_of_marriage, place_of_marriage, contributor, links) "
+                        "children_list, husband_parents, wife_parents, date_of_marriage, place_of_marriage, contributor, links) "
                         "VALUES (:husband_name, :husband_surname, :wife_name, :wife_surname, "
-                        ":children, :children_list, :husband_parents, :wife_parents, :date_of_marriage, :place_of_marriage, :contributor, :links)"
+                        ":children_list, :husband_parents, :wife_parents, :date_of_marriage, :place_of_marriage, :contributor, :links)"
                     ),
                     family,
                 )

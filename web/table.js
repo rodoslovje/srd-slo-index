@@ -295,60 +295,33 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         if (row.surname) params.set('sn', row.surname);
         params.set('ex', '1');
         html += `<td><a href="?${params.toString()}" class="name-link" data-spa-nav>${row[col]}</a></td>`;
-      } else if (col === 'children' && (row.children_list || row[col])) {
+      } else if (col === 'children' && row.children_list) {
         let formattedList = [];
         let count = 0;
 
-        if (row.children_list) {
-          try {
-            const pList = JSON.parse(row.children_list);
-            count = pList.length;
-            formattedList = pList.map(c => {
-              if (c.name === 'private' || c.name === 'unknown') return c.name;
-
-              const params = new URLSearchParams();
-              params.set('t', 'birth');
-              if (c.name) params.set('n', c.name);
-              if (c.surname) params.set('sn', c.surname);
-              if (c.year) params.set('dob', c.year);
-              params.set('ex', '1');
-
-              let childDisplay = c.name || '';
-              if (c.surname && c.surname !== row.husband_surname) childDisplay += ` ${c.surname}`;
-              if (c.year) childDisplay += ` *${c.year}`;
-
-              return `<a href="?${params.toString()}" data-spa-nav>${childDisplay}</a>`;
-            });
-          } catch (e) {
-            console.error("Failed to parse JSON for children", e);
-          }
-        }
-
-        if (formattedList.length === 0 && row[col]) {
-          const childrenList = row[col].split(', ');
-          count = childrenList.length;
-          formattedList = childrenList.map(c => {
-            if (c === 'private' || c === 'unknown') return c;
-
-            let namePart = c;
-            let yearPart = '';
-            const starIdx = c.lastIndexOf('*');
-            if (starIdx !== -1) {
-              namePart = c.substring(0, starIdx).trim();
-              yearPart = c.substring(starIdx + 1).trim();
-            }
+        try {
+          const pList = JSON.parse(row.children_list);
+          count = pList.length;
+          formattedList = pList.map(c => {
+            if (c.name === 'private' || c.name === 'unknown') return c.name;
 
             const params = new URLSearchParams();
             params.set('t', 'birth');
-            if (namePart) params.set('n', namePart);
-            const surname = row.husband_surname || row.wife_surname || '';
-            if (surname) params.set('sn', surname);
-            if (yearPart) params.set('dob', yearPart);
+            if (c.name) params.set('n', c.name);
+            if (c.surname) params.set('sn', c.surname);
+            if (c.year) params.set('dob', c.year);
             params.set('ex', '1');
 
-            return `<a href="?${params.toString()}" data-spa-nav>${c}</a>`;
+            let childDisplay = c.name || '';
+            if (c.surname && c.surname !== row.husband_surname) childDisplay += ` ${c.surname}`;
+            if (c.year) childDisplay += ` *${c.year}`;
+
+            return `<a href="?${params.toString()}" data-spa-nav>${childDisplay}</a>`;
           });
+        } catch (e) {
+          console.error("Failed to parse JSON for children", e);
         }
+
         html += `<td>
           <details class="expandable-cell">
             <summary>${count}</summary>

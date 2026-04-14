@@ -229,7 +229,6 @@ def search_all(
                     _text_filter(models.Family.husband_surname, word, exact),
                     _text_filter(models.Family.wife_name, word, exact),
                     _text_filter(models.Family.wife_surname, word, exact),
-                    _text_filter(models.Family.children, word, exact),
                     _text_filter(models.Family.place_of_marriage, word, exact),
                     _text_filter(models.Family.date_of_marriage, word, exact),
                 )
@@ -385,7 +384,7 @@ def search_advanced_families(
             _text_filter(models.Family.wife_surname, wife_surname, exact)
         )
     if children:
-        query = query.filter(_text_filter(models.Family.children, children, exact))
+        query = query.filter(_text_filter(models.Family.children_list, children, exact))
     if place_of_marriage:
         query = query.filter(
             _text_filter(models.Family.place_of_marriage, place_of_marriage, exact)
