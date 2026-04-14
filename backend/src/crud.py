@@ -149,10 +149,18 @@ def _date_filter(column, from_val: str = None, to_val: str = None, exact: bool =
         decade_min = decade_prefix * 10
         decade_max = decade_prefix * 10 + 9
         decade_conds = [column.op("~")(r"\d{3}_")]
-        if from_year:
-            decade_conds.append(decade_max >= from_year)
-        if to_year:
-            decade_conds.append(decade_min <= to_year)
+        if exact:
+            # Entire decade must fall within the search range
+            if from_year:
+                decade_conds.append(decade_min >= from_year)
+            if to_year:
+                decade_conds.append(decade_max <= to_year)
+        else:
+            # Any overlap with the search range is enough
+            if from_year:
+                decade_conds.append(decade_max >= from_year)
+            if to_year:
+                decade_conds.append(decade_min <= to_year)
         decade_match = and_(*decade_conds)
 
         # Case 3: century approximation — 2 known digits + two underscores (e.g. "19__" → 1900–1999)
@@ -160,10 +168,18 @@ def _date_filter(column, from_val: str = None, to_val: str = None, exact: bool =
         century_min = century_prefix * 100
         century_max = century_prefix * 100 + 99
         century_conds = [column.op("~")(r"\d{2}__")]
-        if from_year:
-            century_conds.append(century_max >= from_year)
-        if to_year:
-            century_conds.append(century_min <= to_year)
+        if exact:
+            # Entire century must fall within the search range
+            if from_year:
+                century_conds.append(century_min >= from_year)
+            if to_year:
+                century_conds.append(century_max <= to_year)
+        else:
+            # Any overlap with the search range is enough
+            if from_year:
+                century_conds.append(century_max >= from_year)
+            if to_year:
+                century_conds.append(century_min <= to_year)
         century_match = and_(*century_conds)
 
         return or_(exact_match, decade_match, century_match)
