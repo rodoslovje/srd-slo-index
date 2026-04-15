@@ -343,6 +343,10 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
           </details>
         </td>`;
       } else if (col === 'parents' && (row.father_name || row.father_surname || row.mother_name || row.mother_surname)) {
+        const hasFather = row.father_name || row.father_surname;
+        const hasMother = row.mother_name || row.mother_surname;
+        const count = (hasFather ? 1 : 0) + (hasMother ? 1 : 0);
+
         const famParams = new URLSearchParams();
         famParams.set('t', 'family');
         if (row.father_name) famParams.set('hn', row.father_name);
@@ -350,10 +354,28 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         if (row.mother_name) famParams.set('wn', row.mother_name);
         if (row.mother_surname) famParams.set('wsn', row.mother_surname);
         famParams.set('ex', '1');
-        const parentsLabel = [row.father_surname, row.mother_surname].filter(Boolean).join(' / ')
-          || [row.father_name, row.mother_name].filter(Boolean).join(' / ')
-          || t('col_parents');
-        html += `<td><a href="?${famParams.toString()}" class="name-link" data-spa-nav>${parentsLabel}</a></td>`;
+
+        const makeBirthLink = (name, surname) => {
+          const display = [name, surname].filter(Boolean).join(' ');
+          if (name === 'private' || name === 'unknown') return display;
+          const p = new URLSearchParams();
+          p.set('t', 'birth');
+          if (name) p.set('n', name);
+          if (surname) p.set('sn', surname);
+          p.set('ex', '1');
+          return `<a href="?${p.toString()}" class="name-link" data-spa-nav>${display}</a>`;
+        };
+
+        let content = `<a href="?${famParams.toString()}" class="name-link" data-spa-nav style="font-weight:600;">${t('col_parents')}: 👪</a>`;
+        if (hasFather) content += `<br>${makeBirthLink(row.father_name, row.father_surname)}`;
+        if (hasMother) content += `<br>${makeBirthLink(row.mother_name, row.mother_surname)}`;
+
+        html += `<td>
+          <details class="expandable-cell">
+            <summary>${count}</summary>
+            <div class="expanded-content">${content}</div>
+          </details>
+        </td>`;
       } else if (col === 'parents' && (row.husband_parents || row.wife_parents)) {
         let parentsCount = 0;
         const renderParents = (parentsJson, labelKey) => {
