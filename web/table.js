@@ -169,6 +169,7 @@ function getValue(row, col) {
 
 const collator = new Intl.Collator('sl', { sensitivity: 'base' });
 
+
 function cmp(a, b) {
   if (typeof a === 'number' && typeof b === 'number') return a - b;
   return collator.compare(String(a ?? ''), String(b ?? ''));
@@ -217,11 +218,7 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
     if (primary?.column === col) indicator = primary.ascending ? '&nbsp;▲' : '&nbsp;▼';
     else if (secondary?.column === col) indicator = secondary.ascending ? '&nbsp;△' : '&nbsp;▽';
     const cls = CENTERED_COLUMNS.has(col) ? ' class="sortable col-center"' : RIGHT_COLUMNS.has(col) ? ' class="sortable col-right"' : ' class="sortable"';
-    if (col === 'parents') {
-      html += `<th data-col="${col}"${cls} title="${t('col_parents')}">👪${indicator}</th>`;
-    } else {
-      html += `<th data-col="${col}"${cls}>${t(`col_${col}`)}${indicator}</th>`;
-    }
+    html += `<th data-col="${col}"${cls}>${t(`col_${col}`)}${indicator}</th>`;
   });
   html += '</tr></thead><tbody>';
 
@@ -353,7 +350,10 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         if (row.mother_name) famParams.set('wn', row.mother_name);
         if (row.mother_surname) famParams.set('wsn', row.mother_surname);
         famParams.set('ex', '1');
-        html += `<td class="col-center"><a href="?${famParams.toString()}" data-spa-nav title="${t('col_parents')}">👪</a></td>`;
+        const parentsLabel = [row.father_surname, row.mother_surname].filter(Boolean).join(' / ')
+          || [row.father_name, row.mother_name].filter(Boolean).join(' / ')
+          || t('col_parents');
+        html += `<td><a href="?${famParams.toString()}" class="name-link" data-spa-nav>${parentsLabel}</a></td>`;
       } else if (col === 'parents' && (row.husband_parents || row.wife_parents)) {
         let parentsCount = 0;
         const renderParents = (parentsJson, labelKey) => {
@@ -401,7 +401,7 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
             if (mDisplay) parentsCount++;
 
             let htmlStr = `<div class="parent-group" style="margin-bottom: 8px;">
-              <a href="?${famParams.toString()}" class="name-link" data-spa-nav style="font-weight: 600;">${t(labelKey)}:</a><br>`;
+              <a href="?${famParams.toString()}" class="name-link" data-spa-nav style="font-weight: 600;">${t(labelKey)}: 👪</a><br>`;
             if (fDisplay) htmlStr += `${getBirthLink(fName, fSur, father.year, fDisplay)}<br>`;
             if (mDisplay) htmlStr += `${getBirthLink(mName, mSur, mother.year, mDisplay)}`;
             htmlStr += `</div>`;
