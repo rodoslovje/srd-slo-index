@@ -27,16 +27,11 @@ def setup_full(db):
     db.execute(
         text(
             """
-        DROP TABLE IF EXISTS births, families, contributors CASCADE;
+        DROP TABLE IF EXISTS births, families, deaths, contributors CASCADE;
 
         CREATE TABLE contributors (
-            id SERIAL PRIMARY KEY,t
+            id SERIAL PRIMARY KEY,
             name VARCHAR(255) UNIQUE NOT NULL,
-            last_modified VARCHAR(255),
-            births_count INTEGER DEFAULT 0,
-            families_count INTEGER DEFAULT 0,
-            deaths_count INTEGER DEFAULT 0,
-            links_count INTEGER DEFAULT 0
             last_modified VARCHAR(255),
             births_count INTEGER DEFAULT 0,
             families_count INTEGER DEFAULT 0,
