@@ -532,7 +532,7 @@ export function clearAllSearchForms() {
   const genHasLink = document.getElementById('general-has_link'); if (genHasLink) genHasLink.checked = false;
   const genExact = document.getElementById('general-exact'); if (genExact) genExact.checked = true;
   ['birth', 'family', 'death'].forEach(type => {
-    document.querySelectorAll(`#adv-${type}-search-controls input`).forEach(el => {
+    document.querySelectorAll(`#${type}-search-controls input`).forEach(el => {
       if (el.type === 'checkbox') el.checked = false;
       if (el.type === 'radio' && el.value === 'exact') el.checked = true;
       else { el.value = ''; const cb = el.nextElementSibling; if (cb?.matches('.clear-btn')) cb.style.display = 'none'; }
