@@ -234,10 +234,6 @@ async function init() {
   try {
     initI18n();
 
-    setupClearableInput(document.getElementById('general-query'), () => {
-      document.getElementById('btn-general-search').click();
-    });
-
     setupClearableInput(document.getElementById('contributors-query'));
 
     setupGeneralSearch();

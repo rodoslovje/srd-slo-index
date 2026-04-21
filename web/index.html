@@ -36,9 +36,12 @@
               <span class="lang-arrow">▾</span>
             </button>
             <div class="lang-dropdown" id="lang-dropdown">
+              <button class="lang-option" data-lang="de">🇩🇪 DE</button>
               <button class="lang-option" data-lang="en">🇬🇧 EN</button>
-              <button class="lang-option" data-lang="sl">🇸🇮 SL</button>
+              <button class="lang-option" data-lang="hr">🇭🇷 HR</button>
               <button class="lang-option" data-lang="it">🇮🇹 IT</button>
+              <button class="lang-option" data-lang="hu">🇭🇺 HU</button>
+              <button class="lang-option" data-lang="sl">🇸🇮 SL</button>
             </div>
           </div>
           <button class="hamburger-btn nav-icon-btn" aria-label="Toggle sidebar">
@@ -124,15 +127,7 @@
           </div>
 
           <div id="general-search-sidebar" class="sidebar-section active">
-            <div class="search-box">
-              <input type="text" id="general-query" data-i18n-placeholder="search_placeholder"
-                placeholder="Search all fields (e.g., name, place, date)..." />
-              <label class="exact-toggle">
-                <input type="checkbox" id="general-exact" />
-                <span data-i18n="exact_search">Exact</span>
-              </label>
-              <button id="btn-general-search" data-i18n="search_btn">Search</button>
-            </div>
+            <div id="general-search-controls" class="search-box"></div>
           </div>
 
           <div id="birth-search-sidebar" class="sidebar-section">

@@ -24,14 +24,27 @@ const MONTH_MAP = {
   // Slovenian full & abbrev (those differing from English)
   januar:1,   februar:2,   marec:3,    maj:5,      junij:6,    julij:7,
   avgust:8,   avg:8,       oktober:10, okt:10,
+  // Croatian full & abbrev (those differing from English)
+  siječanj:1, veljača:2,   vel:2,      ožujak:3,   ožu:3,      travanj:4,   tra:4,
+  svibanj:5,  svi:5,       lipanj:6,   lip:6,      srpanj:7,   srp:7,
+  kolovoz:8,  kol:8,       rujan:9,    ruj:9,      listopad:10,lis:10,
+  studeni:11, stu:11,      prosinac:12,pro:12,
+  // German full & abbrev (those differing from English)
+  januar:1,   februar:2,   märz:3,     mär:3,      april:4,    mai:5,
+  juni:6,     juli:7,      august:8,   september:9, oktober:10,
+  november:11,dezember:12, dez:12,
+  // Hungarian full & abbrev (those differing from English)
+  január:1,   február:2,   március:3,  márc:3,     már:3,      április:4,   ápr:4,
+  május:5,    máj:5,       június:6,   jún:6,      július:7,   júl:7,
+  augusztus:8, szeptember:9, szept:9,  október:10,
   // Italian full & abbrev (those differing from English)
   gennaio:1,  febbraio:2,  marzo:3,    aprile:4,   maggio:5,   giugno:6,
   luglio:7,   agosto:8,    settembre:9, ottobre:10, novembre:11, dicembre:12,
   gen:1, mag:5, giu:6, lug:7, ago:8, set:9, ott:10, dic:12,
 };
 
-// Letters allowed in month names (Latin + Slovenian diacritics)
-const MON_RE = '[A-Za-z\u010D\u0161\u017E\u010C\u0160\u017D]+';
+// Letters allowed in month names (Latin + Slovenian/Croatian diacritics + German umlauts + Hungarian accents)
+const MON_RE = '[A-Za-z\u010D\u0161\u017E\u010C\u0160\u017D\u00E4\u00F6\u00FC\u00C4\u00D6\u00DC\u00E1\u00E9\u00ED\u00F3\u0151\u00FA\u0171\u00C1\u00C9\u00CD\u00D3\u0150\u00DA\u0170]+';
 
 /**
  * Normalize a user-entered date string to GEDCOM-compatible format (e.g. "5 MAR 1875").
