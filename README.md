@@ -59,12 +59,48 @@ data/             # Gitignored — raw GEDCOM files and extracted JSON
 
 ## Prerequisites
 
-| Tool                    | Notes                                         |
-| ----------------------- | --------------------------------------------- |
-| Docker + Docker Compose | v2+ (`docker compose` command)                |
-| Node.js + npm           | For building the frontend                     |
-| ged-tools               | For GEDCOM cleanup and JSON extraction (Python 3 based) |
-| Caddy 2                 | As the reverse proxy / web server on the host |
+### Local development machine
+
+**Windows**
+
+| Tool | Install | Notes |
+| ---- | ------- | ----- |
+| Git | [GitHub Desktop](https://desktop.github.com) *(recommended)* or [Git for Windows](https://git-scm.com) | GitHub Desktop bundles Git and makes `git` available system-wide in PowerShell/Command Prompt |
+| Node.js LTS + npm | [nodejs.org](https://nodejs.org) | Use the Windows installer; npm is included |
+| Docker Desktop | [docker.com/products/docker-desktop](https://docker.com/products/docker-desktop) | Enable the WSL2 backend during setup; required only to run the backend stack locally |
+| Text editor | [VS Code](https://code.visualstudio.com) *(recommended)* | |
+
+**macOS**
+
+| Tool | Install | Notes |
+| ---- | ------- | ----- |
+| Git | Pre-installed | Xcode Command Line Tools are prompted automatically on first `git` use; GitHub Desktop is an optional GUI |
+| Node.js LTS + npm | [nodejs.org](https://nodejs.org) or `brew install node` | npm is included |
+| Docker Desktop | [docker.com/products/docker-desktop](https://docker.com/products/docker-desktop) | Required only to run the backend stack locally |
+
+**Linux (local dev)**
+
+| Tool | Install | Notes |
+| ---- | ------- | ----- |
+| Git | `sudo apt install git` | |
+| Node.js LTS + npm | [NodeSource instructions](https://github.com/nodesource/distributions) or `sudo apt install nodejs npm` | |
+| Docker Engine + Compose | [docs.docker.com/engine/install](https://docs.docker.com/engine/install/ubuntu/) | Required only to run the backend stack locally |
+
+---
+
+### Server (Ubuntu Linux)
+
+| Tool | Notes |
+| ---- | ----- |
+| Docker Engine + Docker Compose v2 | Runs the PostgreSQL and FastAPI containers |
+| Caddy 2 | Reverse proxy and TLS termination |
+| *(Node.js not needed on the server)* | Frontend is built locally and deployed as static files |
+
+---
+
+### GEDCOM data tools (optional, local)
+
+[ged-tools](https://github.com/rodoslovje/ged-tools) is a Python 3 project used for GEDCOM cleanup and JSON extraction. It can run on any OS where Python 3.11+ is available, or directly on the server. Windows users who prefer not to install Python locally can run these steps on the server instead.
 
 ---
 
