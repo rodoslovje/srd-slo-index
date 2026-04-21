@@ -11,6 +11,106 @@ const lastAdvResults = { birth: null, family: null, death: null };
 // Set to true during URL-driven restore so searches use replaceState, not pushState
 let isRestoring = false;
 
+// --- Date normalization ---
+
+const MONTH_NAMES_EN = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+
+// Maps all supported month spellings (EN/IT/SL, full and abbreviated) to 1-based month index
+const MONTH_MAP = {
+  // English full & abbrev
+  january:1,  february:2,  march:3,    april:4,    may:5,      june:6,
+  july:7,     august:8,    september:9, october:10, november:11, december:12,
+  jan:1, feb:2, mar:3, apr:4, jun:6, jul:7, aug:8, sep:9, oct:10, nov:11, dec:12,
+  // Slovenian full & abbrev (those differing from English)
+  januar:1,   februar:2,   marec:3,    maj:5,      junij:6,    julij:7,
+  avgust:8,   avg:8,       oktober:10, okt:10,
+  // Italian full & abbrev (those differing from English)
+  gennaio:1,  febbraio:2,  marzo:3,    aprile:4,   maggio:5,   giugno:6,
+  luglio:7,   agosto:8,    settembre:9, ottobre:10, novembre:11, dicembre:12,
+  gen:1, mag:5, giu:6, lug:7, ago:8, set:9, ott:10, dic:12,
+};
+
+// Letters allowed in month names (Latin + Slovenian diacritics)
+const MON_RE = '[A-Za-z\u010D\u0161\u017E\u010C\u0160\u017D]+';
+
+/**
+ * Normalize a user-entered date string to GEDCOM-compatible format (e.g. "5 MAR 1875").
+ * Supported input formats:
+ *   - d.m.yyyy / dd.mm.yyyy          (European dot-separated, day first; spaces around dot allowed)
+ *   - m/d/yyyy / mm/dd/yyyy          (US slash-separated, month first; spaces around slash allowed)
+ *   - d MonthName yyyy               (any language, full or abbreviated; any whitespace between parts)
+ *   - m.yyyy / MonthName.yyyy        (month-year only, dot separator)
+ *   - m/yyyy / MonthName/yyyy        (month-year only, slash separator)
+ *   - MonthName yyyy                 (month-year only, space separator)
+ *   - yyyy / d MMM yyyy              (pass through)
+ */
+function normalizeSearchDate(val) {
+  if (!val) return val;
+  const str = val.trim();
+
+  // d.m.yyyy — European dot notation (day.month.year), optional spaces around dots
+  const dotMatch = str.match(/^(\d{1,2})\s*\.\s*(\d{1,2})\s*\.\s*(\d{4})$/);
+  if (dotMatch) {
+    const m = parseInt(dotMatch[2], 10);
+    if (m >= 1 && m <= 12) return `${parseInt(dotMatch[1], 10)} ${MONTH_NAMES_EN[m - 1]} ${dotMatch[3]}`;
+  }
+
+  // m/d/yyyy — US slash notation (month/day/year), optional spaces around slashes
+  const slashMatch = str.match(/^(\d{1,2})\s*\/\s*(\d{1,2})\s*\/\s*(\d{4})$/);
+  if (slashMatch) {
+    const m = parseInt(slashMatch[1], 10);
+    if (m >= 1 && m <= 12) return `${parseInt(slashMatch[2], 10)} ${MONTH_NAMES_EN[m - 1]} ${slashMatch[3]}`;
+  }
+
+  // d MonthName yyyy — any supported language, any amount of whitespace between parts
+  const wordMatch = str.match(new RegExp(`^(\\d{1,2})\\s+(${MON_RE})\\s+(\\d{4})$`));
+  if (wordMatch) {
+    const m = MONTH_MAP[wordMatch[2].toLowerCase()];
+    if (m) return `${parseInt(wordMatch[1], 10)} ${MONTH_NAMES_EN[m - 1]} ${wordMatch[3]}`;
+  }
+
+  // m.yyyy or MonthName.yyyy — month-year with dot separator (e.g. "7.1885", "Jul.1885")
+  const monDotYearMatch = str.match(new RegExp(`^(\\d{1,2}|${MON_RE})\\s*\\.\\s*(\\d{4})$`));
+  if (monDotYearMatch) {
+    const raw = monDotYearMatch[1];
+    const year = monDotYearMatch[2];
+    const m = /^\d+$/.test(raw) ? parseInt(raw, 10) : MONTH_MAP[raw.toLowerCase()];
+    if (m >= 1 && m <= 12) return `${MONTH_NAMES_EN[m - 1]} ${year}`;
+  }
+
+  // m/yyyy or MonthName/yyyy — month-year with slash separator (e.g. "7/1885", "Jul/1885")
+  const monSlashYearMatch = str.match(new RegExp(`^(\\d{1,2}|${MON_RE})\\s*\\/\\s*(\\d{4})$`));
+  if (monSlashYearMatch) {
+    const raw = monSlashYearMatch[1];
+    const year = monSlashYearMatch[2];
+    const m = /^\d+$/.test(raw) ? parseInt(raw, 10) : MONTH_MAP[raw.toLowerCase()];
+    if (m >= 1 && m <= 12) return `${MONTH_NAMES_EN[m - 1]} ${year}`;
+  }
+
+  // MonthName yyyy — month-year with space separator (e.g. "Jul 1885", "luglio 1885")
+  const monSpaceYearMatch = str.match(new RegExp(`^(${MON_RE})\\s+(\\d{4})$`));
+  if (monSpaceYearMatch) {
+    const m = MONTH_MAP[monSpaceYearMatch[1].toLowerCase()];
+    if (m) return `${MONTH_NAMES_EN[m - 1]} ${monSpaceYearMatch[2]}`;
+  }
+
+  // yyyy-m-d — ISO-like (year-month-day), e.g. "1875-3-5" or "1875-03-05"
+  const isoFullMatch = str.match(/^(\d{4})\s*-\s*(\d{1,2})\s*-\s*(\d{1,2})$/);
+  if (isoFullMatch) {
+    const m = parseInt(isoFullMatch[2], 10);
+    if (m >= 1 && m <= 12) return `${parseInt(isoFullMatch[3], 10)} ${MONTH_NAMES_EN[m - 1]} ${isoFullMatch[1]}`;
+  }
+
+  // yyyy-m — ISO-like month-year only, e.g. "1885-7" or "1885-07"
+  const isoMonthMatch = str.match(/^(\d{4})\s*-\s*(\d{1,2})$/);
+  if (isoMonthMatch) {
+    const m = parseInt(isoMonthMatch[2], 10);
+    if (m >= 1 && m <= 12) return `${MONTH_NAMES_EN[m - 1]} ${isoMonthMatch[1]}`;
+  }
+
+  return str;
+}
+
 function pushOrReplaceURL(params) {
   // If the current URL has no search conditions (only t=xxx or empty), replace instead of push
   const current = new URLSearchParams(window.location.search);
@@ -134,11 +234,14 @@ export function setupGeneralSearch() {
   });
 }
 
+const DATE_FIELDS = new Set(['date_from', 'date_to', 'date_of_birth', 'date_of_birth_to', 'date_of_marriage', 'date_of_marriage_to', 'date_of_death', 'date_of_death_to']);
+
 function performGeneralSearch() {
   const params = {};
   const fields = ['name', 'surname', 'date_from', 'date_to', 'place', 'contributor'];
   fields.forEach(f => {
-    const val = document.getElementById(`general-${f}`)?.value.trim();
+    let val = document.getElementById(`general-${f}`)?.value.trim();
+    if (DATE_FIELDS.has(f)) val = normalizeSearchDate(val);
     if (val) params[f] = val;
   });
 
@@ -256,10 +359,12 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
   async function performSearch() {
     const fieldParams = {};
     columns.filter(c => !DISPLAY_ONLY_COLUMNS.has(c)).forEach(c => {
-      const val = document.getElementById(`${prefix}${c}`)?.value.trim();
+      let val = document.getElementById(`${prefix}${c}`)?.value.trim();
+      if (DATE_FIELDS.has(c)) val = normalizeSearchDate(val);
       if (val) fieldParams[c] = val;
       if (DATE_RANGE_COLUMNS.has(c)) {
-        const toVal = document.getElementById(`${prefix}${c}_to`)?.value.trim();
+        let toVal = document.getElementById(`${prefix}${c}_to`)?.value.trim();
+        toVal = normalizeSearchDate(toVal);
         if (toVal) fieldParams[`${c}_to`] = toVal;
       }
     });
