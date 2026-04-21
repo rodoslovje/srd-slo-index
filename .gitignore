@@ -27,7 +27,7 @@ dist/
 
 # Web development (Node.js / Vite)
 ############################################
-web/build-info.js
+packages/core/web/build-info.js
 node_modules/
 npm-debug.log*
 yarn-debug.log*

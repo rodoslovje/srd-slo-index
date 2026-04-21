@@ -9,12 +9,12 @@ services:
     restart: unless-stopped
 
   api:
-    build: ./backend
+    build: ../../../packages/core/backend
     container_name: sgi_api
     volumes:
-      - ./data:/app/data
-      - ./tools:/app/tools
-      - ./backend/src:/app/src
+      - ../../../data:/app/data
+      - ../../../packages/core/tools:/app/tools
+      - ../../../packages/core/backend/src:/app/src
     restart: unless-stopped
     env_file:
       - .env

@@ -1,4 +1,5 @@
 import { t, initI18n, onLanguageChange, getIntro } from './i18n.js';
+import siteConfig from '@site-config';
 import { BUILD_TIME, DATA_UPDATED } from './build-info.js';
 import { renderContributors, refreshContributorsIfVisible, renderTotalsBar, prefetchContributors } from './contributors.js';
 import { setupGeneralSearch, setupBirthSearchForm, setupFamilySearchForm, setupDeathSearchForm, restoreFromURL, clearAllSearchForms, getTabURLParams } from './search.js';
@@ -48,12 +49,12 @@ export function renderIntros() {
       : `<p>${p.text}</p>`
   ).join('');
   const logo = `<div class="intro-logo-links">
-    <img src="/srd-logo.png" alt="Slovensko rodoslovno društvo" class="intro-logo" />
+    <img src="${siteConfig.logo}" alt="${siteConfig.logoAlt}" class="intro-logo" />
     <div class="intro-logo-text">
-      <a href="https://rodoslovje.si" target="_blank" rel="noopener" class="intro-logo-link">
+      <a href="${siteConfig.societyUrl}" target="_blank" rel="noopener" class="intro-logo-link">
         <span class="intro-logo-name">${t('society_name')}</span>
       </a>
-      <a href="https://rodoslovje.si/rodoslovni-indeks/" target="_blank" rel="noopener" class="intro-logo-link">
+      <a href="${siteConfig.indexUrl}" target="_blank" rel="noopener" class="intro-logo-link">
         <span class="intro-logo-name">${t('site_title')}</span>
       </a>
     </div>

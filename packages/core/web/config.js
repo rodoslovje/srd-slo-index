@@ -1,5 +1,6 @@
-// API base URL — configurable via SGI_API_HOST environment variable
-const apiHost = import.meta.env.SGI_API_HOST || 'indeks-api.rodoslovje.si';
+import siteConfig from '@site-config';
+
+const apiHost = siteConfig.apiHost;
 const cleanHost = apiHost.replace(/\/+$/, '');
 export const API_BASE_URL = cleanHost.startsWith('http') ? cleanHost : `https://${cleanHost}`;
 

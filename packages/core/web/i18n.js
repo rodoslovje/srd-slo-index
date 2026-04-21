@@ -1,0 +1,618 @@
+import siteConfig from '@site-config';
+
+// Generic UI translations — identical for every installation.
+// Site-specific strings (site_title, society_name, intro paragraphs) live in site.config.js.
+const translations = {
+  en: {
+    // Navigation tabs
+    tab_search: 'Search',
+    tab_birth: 'Birth',
+    tab_family: 'Family',
+    tab_death: 'Death',
+    tab_contributors: 'Contributors',
+
+    // Search controls
+    search_btn: 'Search',
+    exact_search: 'Exact',
+    approximate_search: 'Approximate',
+    has_link: 'With link',
+    date_to: 'to Year',
+    download_csv: 'Download CSV',
+    general_search_label: 'General',
+    chart_others: 'Others',
+    chart_timeline: 'Records Timeline',
+    chart_surnames_title: 'Top Surnames by Contributor',
+    contributors_filter_placeholder: 'Filter by contributor name…',
+    chart_surnames_all: 'All contributors',
+    chart_surnames_select: 'Select contributor…',
+    chart_surnames_loading: 'Loading…',
+
+    // Result section headings
+    results_births: 'Birth',
+    results_families: 'Family',
+    results_deaths: 'Death',
+
+    // Status messages
+    loading: 'Loading genealogical data...',
+    searching: 'Searching...',
+    no_results: 'No results found.',
+    enter_criterion: 'Please enter at least one search criterion.',
+    search_failed: 'Search failed. Check API connection.',
+    loading_contributors: 'Loading contributors...',
+    contributors_failed: 'Could not load contributor data.',
+    init_error: 'Error initializing the application.',
+
+    // Table column headers
+    col_name: 'Name',
+    col_surname: 'Surname',
+    col_date: 'Date',
+    col_place: 'Place',
+    col_date_of_birth: 'Date of Birth',
+    col_place_of_birth: 'Place of Birth',
+    col_contributor: 'Contributor',
+    col_date_of_death: 'Date of Death',
+    col_place_of_death: 'Place of Death',
+    col_husband_name: 'Husband Name',
+    col_husband_surname: 'Husband Surname',
+    col_wife_name: 'Wife Name',
+    col_wife_surname: 'Wife Surname',
+    col_parents: 'Parents',
+    label_husband: 'Husband',
+    label_wife: 'Wife',
+    col_children: 'Children',
+    col_date_of_marriage: 'Date of Marriage',
+    col_place_of_marriage: 'Place of Marriage',
+    col_contributor_ID: 'Contributor',
+    col_total_births: 'Birth',
+    col_total_families: 'Family',
+    col_total_deaths: 'Death',
+    col_total: 'Total',
+    col_last_modified: 'Last Change',
+    col_last_update: 'Last update',
+    col_link: 'Link',
+    col_links: 'Link',
+    col_total_links: 'Links',
+    col_url: 'URL',
+
+    // Tooltips
+    icon_familysearch: 'FamilySearch',
+    icon_grave: 'Grave',
+    icon_census: 'Census',
+    icon_military: 'Casualty of the war',
+    icon_matricula: 'Matricula Online',
+    icon_dlib: 'Digital Library of Slovenia',
+
+    // Footer
+    footer_version: 'Version',
+    footer_data_update: 'Data update',
+  },
+  sl: {
+    // Navigation tabs
+    tab_search: 'Iskanje',
+    tab_birth: 'Rojstvo',
+    tab_family: 'Družina',
+    tab_death: 'Smrt',
+    tab_contributors: 'Dajalci',
+
+    // Search controls
+    search_btn: 'Išči',
+    exact_search: 'Točno',
+    approximate_search: 'Približno',
+    has_link: 'S povezavo',
+    date_to: 'do leta',
+    download_csv: 'Prenesi CSV',
+    general_search_label: 'Splošno',
+    chart_others: 'Ostali',
+    chart_timeline: 'Časovnica zapisov',
+    chart_surnames_title: 'Najpogostejši priimki po dajalcu',
+    contributors_filter_placeholder: 'Filtriraj po imenu dajalca…',
+    chart_surnames_all: 'Vsi dajalci',
+    chart_surnames_select: 'Izberite dajalca…',
+    chart_surnames_loading: 'Nalaganje…',
+
+    // Result section headings
+    results_births: 'Rojstvo',
+    results_families: 'Družina',
+    results_deaths: 'Smrt',
+
+    // Status messages
+    loading: 'Nalaganje genealoških podatkov...',
+    searching: 'Iskanje...',
+    no_results: 'Ni rezultatov.',
+    enter_criterion: 'Vnesite vsaj eno iskalno merilo.',
+    search_failed: 'Iskanje ni uspelo. Preverite povezavo z API-jem.',
+    loading_contributors: 'Nalaganje prispevkov...',
+    contributors_failed: 'Podatkov o prispevkih ni mogoče naložiti.',
+    init_error: 'Napaka pri inicializaciji aplikacije.',
+
+    // Table column headers
+    col_name: 'Ime',
+    col_surname: 'Priimek',
+    col_date: 'Datum',
+    col_place: 'Kraj',
+    col_date_of_birth: 'Datum rojstva',
+    col_place_of_birth: 'Kraj rojstva',
+    col_contributor: 'Dajalec',
+    col_date_of_death: 'Datum smrti',
+    col_place_of_death: 'Kraj smrti',
+    col_husband_name: 'Ime moža',
+    col_husband_surname: 'Priimek moža',
+    col_wife_name: 'Ime žene',
+    col_wife_surname: 'Priimek žene',
+    col_parents: 'Starši',
+    label_husband: 'Mož',
+    label_wife: 'Žena',
+    col_children: 'Otroci',
+    col_date_of_marriage: 'Datum poroke',
+    col_place_of_marriage: 'Kraj poroke',
+    col_contributor_ID: 'Dajalec',
+    col_total_births: 'Rojstvo',
+    col_total_families: 'Družina',
+    col_total_deaths: 'Smrt',
+    col_total: 'Skupaj',
+    col_last_modified: 'Zadnja sprememba',
+    col_last_update: 'Zadnja posodobitev',
+    col_link: 'Povezava',
+    col_links: 'Povezava',
+    col_total_links: 'Povezave',
+    col_url: 'URL',
+
+    // Tooltips
+    icon_familysearch: 'FamilySearch',
+    icon_grave: 'Grob',
+    icon_census: 'Popis prebivalstva',
+    icon_military: 'Žrtev vojne',
+    icon_matricula: 'Matricula Online',
+    icon_dlib: 'Digitalna knjižnica Slovenije',
+
+    // Footer
+    footer_version: 'Različica',
+    footer_data_update: 'Posodobitev podatkov',
+  },
+  hr: {
+    // Navigation tabs
+    tab_search: 'Pretraga',
+    tab_birth: 'Rođenje',
+    tab_family: 'Obitelj',
+    tab_death: 'Smrt',
+    tab_contributors: 'Suradnici',
+
+    // Search controls
+    search_btn: 'Pretraži',
+    exact_search: 'Točno',
+    approximate_search: 'Približno',
+    has_link: 'S poveznicom',
+    date_to: 'do godine',
+    download_csv: 'Preuzmi CSV',
+    general_search_label: 'Opće',
+    chart_others: 'Ostali',
+    chart_timeline: 'Vremenski pregled zapisa',
+    chart_surnames_title: 'Najčešći prezimeni po suradniku',
+    contributors_filter_placeholder: 'Filtriraj po imenu suradnika…',
+    chart_surnames_all: 'Svi suradnici',
+    chart_surnames_select: 'Odaberi suradnika…',
+    chart_surnames_loading: 'Učitavanje…',
+
+    // Result section headings
+    results_births: 'Rođenje',
+    results_families: 'Obitelj',
+    results_deaths: 'Smrt',
+
+    // Status messages
+    loading: 'Učitavanje rodoslovnih podataka...',
+    searching: 'Pretraživanje...',
+    no_results: 'Nema rezultata.',
+    enter_criterion: 'Unesite barem jedan kriterij pretrage.',
+    search_failed: 'Pretraga nije uspjela. Provjerite API vezu.',
+    loading_contributors: 'Učitavanje suradnika...',
+    contributors_failed: 'Nije moguće učitati podatke o suradnicima.',
+    init_error: 'Greška pri inicijalizaciji aplikacije.',
+
+    // Table column headers
+    col_name: 'Ime',
+    col_surname: 'Prezime',
+    col_date: 'Datum',
+    col_place: 'Mjesto',
+    col_date_of_birth: 'Datum rođenja',
+    col_place_of_birth: 'Mjesto rođenja',
+    col_contributor: 'Suradnik',
+    col_date_of_death: 'Datum smrti',
+    col_place_of_death: 'Mjesto smrti',
+    col_husband_name: 'Ime muža',
+    col_husband_surname: 'Prezime muža',
+    col_wife_name: 'Ime žene',
+    col_wife_surname: 'Prezime žene',
+    col_parents: 'Roditelji',
+    label_husband: 'Muž',
+    label_wife: 'Žena',
+    col_children: 'Djeca',
+    col_date_of_marriage: 'Datum vjenčanja',
+    col_place_of_marriage: 'Mjesto vjenčanja',
+    col_contributor_ID: 'Suradnik',
+    col_total_births: 'Rođenje',
+    col_total_families: 'Obitelj',
+    col_total_deaths: 'Smrt',
+    col_total: 'Ukupno',
+    col_last_modified: 'Zadnja izmjena',
+    col_last_update: 'Zadnje ažuriranje',
+    col_link: 'Poveznica',
+    col_links: 'Poveznica',
+    col_total_links: 'Poveznice',
+    col_url: 'URL',
+
+    // Tooltips
+    icon_familysearch: 'FamilySearch',
+    icon_grave: 'Grob',
+    icon_census: 'Popis stanovništva',
+    icon_military: 'Žrtva rata',
+    icon_matricula: 'Matricula Online',
+    icon_dlib: 'Digitalna knjižnica Slovenije',
+
+    // Footer
+    footer_version: 'Verzija',
+    footer_data_update: 'Ažuriranje podataka',
+  },
+  de: {
+    // Navigation tabs
+    tab_search: 'Suche',
+    tab_birth: 'Geburt',
+    tab_family: 'Familie',
+    tab_death: 'Tod',
+    tab_contributors: 'Beitragende',
+
+    // Search controls
+    search_btn: 'Suchen',
+    exact_search: 'Genau',
+    approximate_search: 'Ungefähr',
+    has_link: 'Mit Link',
+    date_to: 'bis Jahr',
+    download_csv: 'CSV herunterladen',
+    general_search_label: 'Allgemein',
+    chart_others: 'Andere',
+    chart_timeline: 'Zeitverlauf der Einträge',
+    chart_surnames_title: 'Häufigste Nachnamen nach Beitragendem',
+    contributors_filter_placeholder: 'Nach Beitragendem filtern…',
+    chart_surnames_all: 'Alle Beitragenden',
+    chart_surnames_select: 'Beitragenden auswählen…',
+    chart_surnames_loading: 'Laden…',
+
+    // Result section headings
+    results_births: 'Geburt',
+    results_families: 'Familie',
+    results_deaths: 'Tod',
+
+    // Status messages
+    loading: 'Genealogische Daten werden geladen...',
+    searching: 'Suche läuft...',
+    no_results: 'Keine Ergebnisse gefunden.',
+    enter_criterion: 'Bitte mindestens ein Suchkriterium eingeben.',
+    search_failed: 'Suche fehlgeschlagen. API-Verbindung prüfen.',
+    loading_contributors: 'Beitragende werden geladen...',
+    contributors_failed: 'Daten der Beitragenden konnten nicht geladen werden.',
+    init_error: 'Fehler beim Initialisieren der Anwendung.',
+
+    // Table column headers
+    col_name: 'Vorname',
+    col_surname: 'Nachname',
+    col_date: 'Datum',
+    col_place: 'Ort',
+    col_date_of_birth: 'Geburtsdatum',
+    col_place_of_birth: 'Geburtsort',
+    col_contributor: 'Beitragender',
+    col_date_of_death: 'Sterbedatum',
+    col_place_of_death: 'Sterbeort',
+    col_husband_name: 'Vorname des Mannes',
+    col_husband_surname: 'Nachname des Mannes',
+    col_wife_name: 'Vorname der Frau',
+    col_wife_surname: 'Nachname der Frau',
+    col_parents: 'Eltern',
+    label_husband: 'Mann',
+    label_wife: 'Frau',
+    col_children: 'Kinder',
+    col_date_of_marriage: 'Heiratsdatum',
+    col_place_of_marriage: 'Heiratsort',
+    col_contributor_ID: 'Beitragender',
+    col_total_births: 'Geburt',
+    col_total_families: 'Familie',
+    col_total_deaths: 'Tod',
+    col_total: 'Gesamt',
+    col_last_modified: 'Letzte Änderung',
+    col_last_update: 'Letztes Update',
+    col_link: 'Link',
+    col_links: 'Link',
+    col_total_links: 'Links',
+    col_url: 'URL',
+
+    // Tooltips
+    icon_familysearch: 'FamilySearch',
+    icon_grave: 'Grab',
+    icon_census: 'Volkszählung',
+    icon_military: 'Kriegsopfer',
+    icon_matricula: 'Matricula Online',
+    icon_dlib: 'Digitale Bibliothek Sloweniens',
+
+    // Footer
+    footer_version: 'Version',
+    footer_data_update: 'Datenaktualisierung',
+  },
+  hu: {
+    // Navigation tabs
+    tab_search: 'Keresés',
+    tab_birth: 'Születés',
+    tab_family: 'Család',
+    tab_death: 'Halál',
+    tab_contributors: 'Közreműködők',
+
+    // Search controls
+    search_btn: 'Keresés',
+    exact_search: 'Pontos',
+    approximate_search: 'Közelítő',
+    has_link: 'Hivatkozással',
+    date_to: 'évig',
+    download_csv: 'CSV letöltése',
+    general_search_label: 'Általános',
+    chart_others: 'Mások',
+    chart_timeline: 'Rekordok időrendje',
+    chart_surnames_title: 'Leggyakoribb vezetéknevek közreműködőnként',
+    contributors_filter_placeholder: 'Szűrés közreműködő neve szerint…',
+    chart_surnames_all: 'Összes közreműködő',
+    chart_surnames_select: 'Válasszon közreműködőt…',
+    chart_surnames_loading: 'Betöltés…',
+
+    // Result section headings
+    results_births: 'Születés',
+    results_families: 'Család',
+    results_deaths: 'Halál',
+
+    // Status messages
+    loading: 'Genealógiai adatok betöltése...',
+    searching: 'Keresés...',
+    no_results: 'Nincs találat.',
+    enter_criterion: 'Kérjük, adjon meg legalább egy keresési feltételt.',
+    search_failed: 'A keresés sikertelen. Ellenőrizze az API-kapcsolatot.',
+    loading_contributors: 'Közreműködők betöltése...',
+    contributors_failed: 'A közreműködők adatait nem sikerült betölteni.',
+    init_error: 'Hiba az alkalmazás inicializálásakor.',
+
+    // Table column headers
+    col_name: 'Utónév',
+    col_surname: 'Vezetéknév',
+    col_date: 'Dátum',
+    col_place: 'Helyszín',
+    col_date_of_birth: 'Születési dátum',
+    col_place_of_birth: 'Születési hely',
+    col_contributor: 'Közreműködő',
+    col_date_of_death: 'Halál dátuma',
+    col_place_of_death: 'Halál helye',
+    col_husband_name: 'Férj utóneve',
+    col_husband_surname: 'Férj vezetékneve',
+    col_wife_name: 'Feleség utóneve',
+    col_wife_surname: 'Feleség vezetékneve',
+    col_parents: 'Szülők',
+    label_husband: 'Férj',
+    label_wife: 'Feleség',
+    col_children: 'Gyermekek',
+    col_date_of_marriage: 'Házasságkötés dátuma',
+    col_place_of_marriage: 'Házasságkötés helye',
+    col_contributor_ID: 'Közreműködő',
+    col_total_births: 'Születés',
+    col_total_families: 'Család',
+    col_total_deaths: 'Halál',
+    col_total: 'Összesen',
+    col_last_modified: 'Utolsó módosítás',
+    col_last_update: 'Utolsó frissítés',
+    col_link: 'Hivatkozás',
+    col_links: 'Hivatkozás',
+    col_total_links: 'Hivatkozások',
+    col_url: 'URL',
+
+    // Tooltips
+    icon_familysearch: 'FamilySearch',
+    icon_grave: 'Sír',
+    icon_census: 'Népszámlálás',
+    icon_military: 'Háborús áldozat',
+    icon_matricula: 'Matricula Online',
+    icon_dlib: 'Szlovénia Digitális Könyvtára',
+
+    // Footer
+    footer_version: 'Verzió',
+    footer_data_update: 'Adatfrissítés',
+  },
+  it: {
+    // Navigation tabs
+    tab_search: 'Ricerca',
+    tab_birth: 'Nascita',
+    tab_family: 'Famiglia',
+    tab_death: 'Morte',
+    tab_contributors: 'Collaboratori',
+
+    // Search controls
+    search_btn: 'Cerca',
+    exact_search: 'Esatto',
+    approximate_search: 'Approssimato',
+    has_link: 'Con collegamento',
+    date_to: 'fino all\'anno',
+    download_csv: 'Scarica CSV',
+    general_search_label: 'Generale',
+    chart_others: 'Altri',
+    chart_timeline: 'Cronologia dei record',
+    chart_surnames_title: 'Cognomi più frequenti per collaboratore',
+    contributors_filter_placeholder: 'Filtra per nome collaboratore…',
+    chart_surnames_all: 'Tutti i collaboratori',
+    chart_surnames_select: 'Seleziona collaboratore…',
+    chart_surnames_loading: 'Caricamento…',
+
+    // Result section headings
+    results_births: 'Nascita',
+    results_families: 'Famiglia',
+    results_deaths: 'Morte',
+
+    // Status messages
+    loading: 'Caricamento dei dati genealogici...',
+    searching: 'Ricerca in corso...',
+    no_results: 'Nessun risultato trovato.',
+    enter_criterion: 'Inserisci almeno un criterio di ricerca.',
+    search_failed: 'Ricerca fallita. Controlla la connessione API.',
+    loading_contributors: 'Caricamento collaboratori...',
+    contributors_failed: 'Impossibile caricare i dati dei collaboratori.',
+    init_error: 'Errore durante l\'inizializzazione dell\'applicazione.',
+
+    // Table column headers
+    col_name: 'Nome',
+    col_surname: 'Cognome',
+    col_date: 'Data',
+    col_place: 'Luogo',
+    col_date_of_birth: 'Data di nascita',
+    col_place_of_birth: 'Luogo di nascita',
+    col_contributor: 'Collaboratore',
+    col_date_of_death: 'Data di morte',
+    col_place_of_death: 'Luogo di morte',
+    col_husband_name: 'Nome del marito',
+    col_husband_surname: 'Cognome del marito',
+    col_wife_name: 'Nome della moglie',
+    col_wife_surname: 'Cognome della moglie',
+    col_parents: 'Genitori',
+    label_husband: 'Marito',
+    label_wife: 'Moglie',
+    col_children: 'Figli',
+    col_date_of_marriage: 'Data di matrimonio',
+    col_place_of_marriage: 'Luogo di matrimonio',
+    col_contributor_ID: 'Collaboratore',
+    col_total_births: 'Nascita',
+    col_total_families: 'Famiglia',
+    col_total_deaths: 'Morte',
+    col_total: 'Totale',
+    col_last_modified: 'Ultima modifica',
+    col_last_update: 'Ultimo aggiornamento',
+    col_link: 'Collegamento',
+    col_links: 'Collegamento',
+    col_total_links: 'Collegamenti',
+    col_url: 'URL',
+
+    // Tooltips
+    icon_familysearch: 'FamilySearch',
+    icon_grave: 'Tomba',
+    icon_census: 'Censimento',
+    icon_military: 'Vittima di guerra',
+    icon_matricula: 'Matricula Online',
+    icon_dlib: 'Biblioteca digitale della Slovenia',
+
+    // Footer
+    footer_version: 'Versione',
+    footer_data_update: 'Aggiornamento dati',
+  },
+};
+
+// Flag and code for each supported language (used to render the lang switcher)
+const LANG_META = {
+  en: { flag: '🇬🇧', code: 'EN' },
+  sl: { flag: '🇸🇮', code: 'SL' },
+  hr: { flag: '🇭🇷', code: 'HR' },
+  hu: { flag: '🇭🇺', code: 'HU' },
+  de: { flag: '🇩🇪', code: 'DE' },
+  it: { flag: '🇮🇹', code: 'IT' },
+};
+
+function detectLanguage() {
+  const saved = localStorage.getItem('sgi-lang');
+  if (saved && siteConfig.languages.includes(saved) && translations[saved]) return saved;
+  const browser = (navigator.language || '').slice(0, 2).toLowerCase();
+  if (siteConfig.languages.includes(browser) && translations[browser]) return browser;
+  return siteConfig.defaultLang || 'en';
+}
+
+let currentLang = detectLanguage();
+const changeListeners = [];
+
+/** Returns the translation for a given key in the current language.
+ *  Site-specific overrides (site_title, society_name) are checked first. */
+export function t(key) {
+  const siteOverride = siteConfig.i18n?.[currentLang]?.[key];
+  if (siteOverride !== undefined) return siteOverride;
+  return (translations[currentLang]?.[key]) ?? (translations.en?.[key]) ?? key;
+}
+
+/** Returns the intro paragraphs for the current language (from site config). */
+export function getIntro() {
+  return siteConfig.intro?.[currentLang] || siteConfig.intro?.en || [];
+}
+
+export function getCurrentLang() {
+  return currentLang;
+}
+
+/** Register a callback to be called whenever the language changes. */
+export function onLanguageChange(callback) {
+  changeListeners.push(callback);
+}
+
+export function setLanguage(lang) {
+  if (!translations[lang] || !siteConfig.languages.includes(lang) || lang === currentLang) return;
+  currentLang = lang;
+  localStorage.setItem('sgi-lang', lang);
+  applyStaticTranslations();
+  changeListeners.forEach(fn => fn(lang));
+}
+
+function applyStaticTranslations() {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    el.textContent = t(el.dataset.i18n);
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    el.placeholder = t(el.dataset.i18nPlaceholder);
+  });
+  document.querySelectorAll('[data-i18n-title]').forEach(el => {
+    el.title = t(el.dataset.i18nTitle);
+  });
+
+  // Update page title
+  document.title = t('site_title');
+
+  // Update lang toggle button
+  const meta = LANG_META[currentLang];
+  const flagEl = document.querySelector('#lang-toggle .lang-flag');
+  const codeEl = document.querySelector('#lang-toggle .lang-code');
+  if (flagEl) flagEl.textContent = meta.flag;
+  if (codeEl) codeEl.textContent = meta.code;
+
+  document.querySelectorAll('.lang-option').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.lang === currentLang);
+  });
+
+  document.documentElement.lang = currentLang;
+}
+
+/** Sets up the language switcher dropdown and applies initial translations. */
+export function initI18n() {
+  // Build language buttons from site config (only languages defined for this installation)
+  const dropdown = document.getElementById('lang-dropdown');
+  if (dropdown) {
+    dropdown.innerHTML = siteConfig.languages
+      .map(lang => {
+        const meta = LANG_META[lang];
+        if (!meta) return '';
+        return `<button class="lang-option" data-lang="${lang}">${meta.flag} ${meta.code}</button>`;
+      })
+      .join('');
+  }
+
+  applyStaticTranslations();
+
+  const toggle = document.getElementById('lang-toggle');
+  if (!toggle || !dropdown) return;
+
+  toggle.addEventListener('click', (e) => {
+    e.stopPropagation();
+    dropdown.classList.toggle('open');
+  });
+
+  document.addEventListener('click', () => dropdown.classList.remove('open'));
+
+  dropdown.addEventListener('click', (e) => {
+    const btn = e.target.closest('.lang-option');
+    if (btn) {
+      setLanguage(btn.dataset.lang);
+      dropdown.classList.remove('open');
+    }
+  });
+}

@@ -1,12 +1,14 @@
 {
-  "name": "slovenian-genealogical-index",
+  "name": "genealogical-index",
   "private": true,
   "version": "1.0.0",
-  "type": "module",
+  "workspaces": [
+    "packages/sites/*"
+  ],
   "scripts": {
-    "dev": "cd web && vite --port 1995",
-    "build": "cd web && vite build",
-    "preview": "cd web && vite preview"
+    "dev:slo": "npm run dev --workspace=packages/sites/slo",
+    "build:slo": "npm run build --workspace=packages/sites/slo",
+    "preview:slo": "npm run preview --workspace=packages/sites/slo"
   },
   "devDependencies": {
     "vite": "^5.0.0"

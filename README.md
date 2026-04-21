@@ -1,6 +1,6 @@
-# Slovenian Genealogical Index
+# Genealogical Index
 
-A searchable web application for genealogical data with a PostgreSQL database, Python FastAPI backend, and a vanilla JavaScript frontend.
+A searchable web application for genealogical data with a PostgreSQL database, Python FastAPI backend, and a vanilla JavaScript frontend. Designed as a monorepo that supports multiple country installations sharing the same core code but with per-site branding, translations, and configuration.
 
 ## Architecture
 
@@ -13,7 +13,7 @@ A searchable web application for genealogical data with a PostgreSQL database, P
 | Containerisation | Docker & Docker Compose                         |
 
 ```
-Internet → Caddy → /          → static files (frontend dist/)
+Internet → Caddy → /          → static files (site dist/)
                  → api.domain → Docker: sgi_api (FastAPI :8000)
                                         ↕
                                 Docker: sgi_postgres (:5432)
@@ -21,14 +21,50 @@ Internet → Caddy → /          → static files (frontend dist/)
 
 ---
 
+## Repository Layout
+
+```
+packages/
+  core/
+    web/          # Shared frontend (JS / HTML / CSS) — imports @site-config
+    backend/      # Shared FastAPI application
+    tools/        # Shared GEDCOM import scripts
+  sites/
+    slo/          # Slovenia installation
+      web/
+        site.config.js   # Branding, languages, intro texts, API host
+        public/          # Logo, favicons
+      vite.config.js     # Sets root=core/web, resolves @site-config alias
+      package.json       # name: "slo-index"
+      docker-compose.yml
+      .env.example
+      caddy/
+data/             # Gitignored — raw GEDCOM files and extracted JSON
+```
+
+### Adding a new country installation
+
+1. Copy `packages/sites/slo/` to e.g. `packages/sites/hrv/`.
+2. Edit `packages/sites/hrv/web/site.config.js` — set logo, links, languages, intro texts, API host.
+3. Replace assets in `packages/sites/hrv/web/public/`.
+4. Edit `packages/sites/hrv/package.json` — set a unique `name` (e.g. `"hrv-index"`).
+5. Add workspace scripts to the root `package.json`:
+   ```json
+   "dev:hrv": "npm run dev --workspace=packages/sites/hrv",
+   "build:hrv": "npm run build --workspace=packages/sites/hrv"
+   ```
+6. Set up a `docker-compose.yml` and `.env` in `packages/sites/hrv/` pointing to the new server's data directory and API host.
+
+---
+
 ## Prerequisites
 
 | Tool                    | Notes                                         |
 | ----------------------- | --------------------------------------------- |
-| Docker + Docker Compose | v2+ (`docker compose` command)                           |
-| Node.js + Yarn          | For building the frontend                                |
-| ged-tools               | For GEDCOM cleanup and JSON extraction (Python 3 based)  |
-| Caddy 2                 | As the reverse proxy / web server on the host            |
+| Docker + Docker Compose | v2+ (`docker compose` command)                |
+| Node.js + npm           | For building the frontend                     |
+| ged-tools               | For GEDCOM cleanup and JSON extraction (Python 3 based) |
+| Caddy 2                 | As the reverse proxy / web server on the host |
 
 ---
 
@@ -64,17 +100,17 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Run the cleanup for each contributor file:
+Run the cleanup for all files in the input folder:
 
 ```bash
 # From inside the ged-tools directory
-python tools/gedcom_cleaner.py \
-  /path/to/data/input/contributor.ged \
-  /path/to/data/filtered/contributor.ged \
-  --warn --stats --preset index_cleanup_sgi
+python tools/gedcom-cleaner.py \
+  --input-dir /path/to/data/input \
+  --output-dir /path/to/data/filtered \
+  --preset index_cleanup_sgi
 ```
 
-Repeat for each contributor file. The cleaned files in `data/filtered/` are then ready for JSON extraction.
+The script runs in update mode by default — it skips files that are already up-to-date. The cleaned files in `data/filtered/` are then ready for JSON extraction.
 
 > The `index_cleanup_sgi` preset: standardises dates and places, removes records with no valid names, and anonymises persons likely still living (within 100 years of birth) or who died within the last 20 years.
 
@@ -89,7 +125,7 @@ The extraction script has moved to [ged-tools](https://github.com/rodoslovje/ged
 
    ```bash
    # From inside the ged-tools directory (venv already active from step 1.1)
-   python tools/gedcom-to-json.py --mode update --data-dir /path/to/srd-slo-index/data
+   python tools/gedcom-to-json.py --mode update --data-dir /path/to/genealogical-index/data
    ```
 
    Output JSON files and `metadata.json` are written to `data/output/`.
@@ -114,10 +150,10 @@ docker network create caddy_net
 
 ### 2.2 Configure environment variables
 
-Copy the example file and fill in your values:
+Copy the example file and fill in your values (from the site directory, e.g. `packages/sites/slo/`):
 
 ```bash
-cp .env.example .env
+cp packages/sites/slo/.env.example packages/sites/slo/.env
 ```
 
 Edit `.env`:
@@ -135,6 +171,7 @@ SGI_API_HOST=api.yourdomain.com
 ### 2.3 Build and start the backend containers
 
 ```bash
+cd packages/sites/slo
 docker compose up -d --build
 ```
 
@@ -172,7 +209,7 @@ Caddy runs as a Docker container on the same `caddy_net` network as the app. It 
 
 ### 3.1 Server directory layout
 
-This repository ships ready-made Caddy config files in the `caddy/` directory:
+This repository ships ready-made Caddy config files in `packages/sites/slo/caddy/`:
 
 ```
 caddy/
@@ -184,7 +221,7 @@ caddy/
 Copy the `caddy/` directory to your server once (shared by all services):
 
 ```bash
-scp -r caddy/ user@yourserver:/srv/caddy
+scp -r packages/sites/slo/caddy/ user@yourserver:/srv/caddy
 ```
 
 On the server, create the `conf.d/` directory and add the SGI snippet:
@@ -198,8 +235,8 @@ The final server layout:
 
 ```
 /srv/caddy/
-├── docker-compose.yml      # Caddy container (caddy/docker-compose.yml)
-├── Caddyfile               # Root config (caddy/Caddyfile)
+├── docker-compose.yml      # Caddy container
+├── Caddyfile               # Root config
 ├── conf.d/                 # Per-service snippets — one .caddyfile per project
 │   └── sgi.caddyfile       # ← copied from caddy/sgi.caddyfile
 └── data/                   # Docker volume mount for Caddy TLS certs (auto-created)
@@ -230,7 +267,7 @@ docker compose up -d
 This repository ships a ready-made snippet at `caddy/sgi.caddyfile`. Copy it to the server and customise the domain names:
 
 ```bash
-scp caddy/sgi.caddyfile user@yourserver:/srv/caddy/conf.d/sgi.caddyfile
+scp packages/sites/slo/caddy/sgi.caddyfile user@yourserver:/srv/caddy/conf.d/sgi.caddyfile
 ```
 
 Edit the copy on the server — replace `yourdomain.com` and `api.yourdomain.com`:
@@ -279,35 +316,30 @@ docker exec caddy caddy validate --config /etc/caddy/Caddyfile && \
 
 ### 4.1 Configure the API host
 
-The frontend reads `SGI_API_HOST` at build time via Vite. Set it in a `.env` file in the project root (same file used by Docker Compose):
+The frontend reads the API host from the `apiHost` field in `packages/sites/slo/web/site.config.js`. Edit that field directly before building.
 
-```env
-SGI_API_HOST=api.yourdomain.com
-```
-
-### 4.2 Build
+### 4.2 Install dependencies
 
 ```bash
-yarn install
-yarn build
+npm install
 ```
 
-The production-ready files are written to `web/dist/`.
+### 4.3 Build
 
-### 4.3 Deploy to the server
+```bash
+# Slovenia
+npm run build:slo
+```
+
+The production-ready files are written to `packages/sites/slo/dist/`.
+
+### 4.4 Deploy to the server
 
 Copy the built files to the directory Caddy serves:
 
 ```bash
-# Replace user@yourserver with your actual SSH target
 ssh user@yourserver "mkdir -p /var/www/sgi"
-rsync -avz --delete web/dist/ user@yourserver:/var/www/sgi/
-```
-
-Or with `scp`:
-
-```bash
-scp -r web/dist/* user@yourserver:/var/www/sgi/
+rsync -avz --delete packages/sites/slo/dist/ user@yourserver:/var/www/sgi/
 ```
 
 No Caddy reload is needed — Caddy serves files directly from disk.
@@ -319,6 +351,7 @@ No Caddy reload is needed — Caddy serves files directly from disk.
 ### Backend code change
 
 ```bash
+cd packages/sites/slo
 docker compose up -d --build api
 ```
 
@@ -327,26 +360,27 @@ docker compose up -d --build api
 ```bash
 # 1. locally — clean raw GEDCOM files (remove living persons / recent deaths)
 #    see Section 1.1 for ged-tools setup; run from inside the ged-tools directory
-python tools/gedcom_cleaner.py \
-  /path/to/srd-slo-index/data/input/contributor.ged \
-  /path/to/srd-slo-index/data/filtered/contributor.ged \
-  --preset srd_index_cleanup
+python tools/gedcom-cleaner.py \
+  --input-dir /path/to/data/input \
+  --output-dir /path/to/data/filtered \
+  --preset index_cleanup_sgi
 
 # 2. locally — re-extract JSON from cleaned files (run from inside ged-tools directory)
-python tools/gedcom-to-json.py --mode update --data-dir /path/to/srd-slo-index/data
+python tools/gedcom-to-json.py --mode update --data-dir /path/to/genealogical-index/data
 
 # 3. copy data/output/ to server
-rsync -avz data/output/ user@yourserver:/path/to/sgi/data/output/
+rsync -avz data/output/ user@yourserver:/path/to/data/output/
 
 # 4. on server — reimport changed contributors
+cd packages/sites/slo
 docker compose exec api python tools/import_to_db.py --mode update
 ```
 
 ### Frontend change
 
 ```bash
-yarn build
-rsync -avz --delete web/dist/ user@yourserver:/var/www/sgi/
+npm run build:slo
+rsync -avz --delete packages/sites/slo/dist/ user@yourserver:/var/www/sgi/
 ```
 
 ---
@@ -356,13 +390,13 @@ rsync -avz --delete web/dist/ user@yourserver:/var/www/sgi/
 Start the Vite dev server (accessible on the local network):
 
 ```bash
-yarn dev
+npm run dev:slo
 ```
 
-The dev server proxies API calls to `SGI_API_HOST` (set in `.env`) and hot-reloads on file changes.
+The dev server runs on port 1995 and hot-reloads on file changes in both `packages/core/web/` and `packages/sites/slo/web/`.
 
 Preview the production build locally:
 
 ```bash
-yarn build && yarn preview
+npm run build:slo && npm run preview:slo
 ```
