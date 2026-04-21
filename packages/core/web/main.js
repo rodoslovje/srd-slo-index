@@ -48,15 +48,21 @@ export function renderIntros() {
       ? `<p class="intro-warning">${p.text}</p>`
       : `<p>${p.text}</p>`
   ).join('');
+  const logoImg = siteConfig.logo
+    ? `<img src="${siteConfig.logo}" alt="${siteConfig.logoAlt}" class="intro-logo" />`
+    : '';
+  const indexLink = siteConfig.indexUrl
+    ? `<a href="${siteConfig.indexUrl}" target="_blank" rel="noopener" class="intro-logo-link">
+        <span class="intro-logo-name">${t('site_title')}</span>
+      </a>`
+    : '';
   const logo = `<div class="intro-logo-links">
-    <img src="${siteConfig.logo}" alt="${siteConfig.logoAlt}" class="intro-logo" />
+    ${logoImg}
     <div class="intro-logo-text">
       <a href="${siteConfig.societyUrl}" target="_blank" rel="noopener" class="intro-logo-link">
         <span class="intro-logo-name">${t('society_name')}</span>
       </a>
-      <a href="${siteConfig.indexUrl}" target="_blank" rel="noopener" class="intro-logo-link">
-        <span class="intro-logo-name">${t('site_title')}</span>
-      </a>
+      ${indexLink}
     </div>
   </div>`;
   const html = paragraphs + logo;
