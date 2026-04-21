@@ -8,7 +8,10 @@
   "scripts": {
     "dev:slo": "npm run dev --workspace=packages/sites/slo",
     "build:slo": "npm run build --workspace=packages/sites/slo",
-    "preview:slo": "npm run preview --workspace=packages/sites/slo"
+    "preview:slo": "npm run preview --workspace=packages/sites/slo",
+    "dev:cro": "npm run dev --workspace=packages/sites/cro",
+    "build:cro": "npm run build --workspace=packages/sites/cro",
+    "preview:cro": "npm run preview --workspace=packages/sites/cro"
   },
   "devDependencies": {
     "vite": "^8.0.9"
