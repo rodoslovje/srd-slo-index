@@ -5,11 +5,11 @@
  */
 const siteConfig = {
   // Branding
-  logo:        null,
-  logoAlt:     null,
+  logo:        '/hrd-logo.png',
+  logoAlt:     'Hrvatsko rodoslovno društvo “Pavao Ritter Vitezović”',
   societyUrl:  'https://www.rodoslovlje.hr',
   indexUrl:    null,
-  contactEmail: 'todo@rodoslovlje.hr',
+  contactEmail: 'rodoslovlje@rodoslovlje.hr',
 
   apiHost: 'indeks-api.rodoslovlje.hr',
 
@@ -60,7 +60,7 @@ const siteConfig = {
       { text: 'Rezultati upita mogu se sortirati po bilo kojem stupcu. Za potpuni pregled, prozor za pretragu može se sakriti. Moguć je izvoz rezultata u obliku CSV datoteke. Za strane korisnike indeksa stranica je dostupna i na engleskom.' },
       { text: 'Popis prezimena, imena, datuma i mjesta rođenja, vjenčanja i smrti napravljen je iz objedinjene datoteke u koju su rezultate svoga rada pridonijeli brojni rodoslovci navedeni na stranici <a href="?t=contributors">Suradnici</a>.' },
       { text: 'Upozorenje! Hrvatski rodoslovni indeks isključivo je informativnog karaktera. Hrvatsko rodoslovno društvo odriče se svake odgovornosti za točnost dostavljenih podataka. Društvo je dobrovoljno udruženje pojedinaca koji razvijaju zajednički izvor poznavanja podataka iz matičnih knjiga i drugih pisanih i usmenih izvora. Struktura društva omogućuje svakome tko ima vlastitu zbirku rodoslovnih podataka da je pridonese zajedničkoj kumulativnoj zbirci i indeksu. Za točnost podataka ne može jamčiti ni jedan pojedinac koji je pridonio podatke u indeks, kao ni Hrvatsko rodoslovno društvo.', warning: true },
-      { text: 'Ako imate vlastito obiteljsko stablo u obliku baze podataka i željeli biste se pridružiti postojećim suradnicima s rezultatima svojega rada, pošaljite svoju GEDCOM datoteku (bez podataka o živim osobama) <a href="mailto:todo@rodoslovje.hr">e-poštom</a> administratoru.' },
+      { text: 'Ako imate vlastito obiteljsko stablo u obliku baze podataka i željeli biste se pridružiti postojećim suradnicima s rezultatima svojega rada, pošaljite svoju GEDCOM datoteku (bez podataka o živim osobama) <a href="mailto:rodoslovlje@rodoslovlje.hr">e-poštom</a> administratoru.' },
     ],
     hu: [
       { text: '' },
