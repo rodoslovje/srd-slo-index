@@ -2,9 +2,10 @@ import { defineConfig } from 'vite';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import siteConfig from './web/site.config.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const coreWeb = path.resolve(__dirname, '../core/web');
+const coreWeb = path.resolve(__dirname, '../../core/web');
 
 function buildInfoPlugin() {
   function generate() {
@@ -25,6 +26,21 @@ function buildInfoPlugin() {
   };
 }
 
+function siteTitlePlugin() {
+  const lang = siteConfig.defaultLang || 'en';
+  const nativeTitle = (siteConfig.i18n?.[lang] ?? siteConfig.i18n?.en)?.site_title ?? 'Genealogical Index';
+  const enTitle = siteConfig.i18n?.en?.site_title;
+  const siteTitle = (enTitle && lang !== 'en') ? `${nativeTitle} - ${enTitle}` : nativeTitle;
+  return {
+    name: 'site-title',
+    transformIndexHtml(html) {
+      return html
+        .replace(/<title>[^<]*<\/title>/, `<title>${siteTitle}</title>`)
+        .replace('</head>', `  <meta property="og:title" content="${siteTitle}" />\n  </head>`);
+    },
+  };
+}
+
 export default defineConfig({
   root: coreWeb,
   publicDir: path.resolve(__dirname, 'web/public'),
@@ -40,5 +56,5 @@ export default defineConfig({
   server: {
     host: true,
   },
-  plugins: [buildInfoPlugin()],
+  plugins: [buildInfoPlugin(), siteTitlePlugin()],
 });
