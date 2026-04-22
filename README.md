@@ -29,36 +29,35 @@ Internet → Caddy → /          → static files (site dist/)
 ## Repository Layout
 
 ```
-packages/
-  core/
-    web/          # Shared frontend (JS / HTML / CSS) — imports @site-config
-    backend/      # Shared FastAPI application
-    tools/        # Shared JSON import scripts
-  sites/
-    slo/          # Slovenia installation
-      web/
-        site.config.js   # Branding, languages, intro texts, API host
-        public/          # Logo, favicons
-      vite.config.js     # Sets root=core/web, resolves @site-config alias
-      package.json       # name: "slo-index"
-      docker-compose.yml
-      .env.example
-      caddy/
+core/
+  web/          # Shared frontend (JS / HTML / CSS) — imports @site-config
+  backend/      # Shared FastAPI application
+  tools/        # Shared JSON import scripts
+sites/
+  slo/          # Slovenia installation
+    web/
+      site.config.js   # Branding, languages, intro texts, API host
+      public/          # Logo, favicons
+    vite.config.js     # Sets root=core/web, resolves @site-config alias
+    package.json       # name: "slo-index"
+    docker-compose.yml
+    .env.example
+    caddy/
 data/             # Gitignored — raw GEDCOM files and extracted JSON
 ```
 
 ### Adding a new country installation
 
-1. Copy `packages/sites/slo/` to e.g. `packages/sites/cro/`.
-2. Edit `packages/sites/cro/web/site.config.js` — set logo, links, languages, intro texts, API host.
-3. Replace assets in `packages/sites/cro/web/public/`.
-4. Edit `packages/sites/cro/package.json` — set a unique `name` (e.g. `"cro-index"`).
+1. Copy `sites/slo/` to e.g. `sites/cro/`.
+2. Edit `sites/cro/web/site.config.js` — set logo, links, languages, intro texts, API host.
+3. Replace assets in `sites/cro/web/public/`.
+4. Edit `sites/cro/package.json` — set a unique `name` (e.g. `"cro-index"`).
 5. Add workspace scripts to the root `package.json`:
    ```json
-   "dev:cro": "npm run dev --workspace=packages/sites/cro",
-   "build:cro": "npm run build --workspace=packages/sites/cro"
+   "dev:cro": "npm run dev --workspace=sites/cro",
+   "build:cro": "npm run build --workspace=sites/cro"
    ```
-6. Set up a `docker-compose.yml` and `.env` in `packages/sites/cro/` pointing to the new server's data directory and API host.
+6. Set up a `docker-compose.yml` and `.env` in `sites/cro/` pointing to the new server's data directory and API host.
 
 ---
 
@@ -225,10 +224,10 @@ docker network create caddy_net
 
 ### 2.2 Configure environment variables
 
-Copy the example file and fill in your values (from the site directory, e.g. `packages/sites/slo/`):
+Copy the example file and fill in your values (from the site directory, e.g. `sites/slo/`):
 
 ```bash
-cp packages/sites/slo/.env.example packages/sites/slo/.env
+cp sites/slo/.env.example sites/slo/.env
 ```
 
 Edit `.env`:
@@ -246,7 +245,7 @@ API_HOST=api.yourdomain.com
 ### 2.3 Build and start the backend containers
 
 ```bash
-cd packages/sites/slo
+cd sites/slo
 docker compose up -d --build
 ```
 
@@ -284,7 +283,7 @@ Caddy runs as a Docker container on the same `caddy_net` network as the app. It 
 
 ### 3.1 Server directory layout
 
-This repository ships ready-made Caddy config files in `packages/sites/slo/caddy/`:
+This repository ships ready-made Caddy config files in `sites/slo/caddy/`:
 
 ```
 caddy/
@@ -297,7 +296,7 @@ caddy/
 Copy the `caddy/` directory and subfolders to your server once (shared by all services):
 
 ```bash
-scp -r packages/sites/slo/caddy/ user@yourserver:/var/caddy
+scp -r sites/slo/caddy/ user@yourserver:/var/caddy
 ```
 
 ### 3.2 Root Caddyfile
@@ -325,7 +324,7 @@ docker compose up -d
 This repository ships a ready-made snippet at `caddy/sgi.caddyfile`. Copy it to the server and customise the domain names:
 
 ```bash
-scp packages/sites/slo/caddy/sgi.caddyfile user@yourserver:/srv/caddy/conf.d/sgi.caddyfile
+scp sites/slo/caddy/sgi.caddyfile user@yourserver:/srv/caddy/conf.d/sgi.caddyfile
 ```
 
 Edit the copy on the server — replace `yourdomain.com` and `api.yourdomain.com`:
@@ -371,7 +370,7 @@ docker exec caddy caddy validate --config /etc/caddy/Caddyfile && \
 
 ### 4.1 Configure the API host
 
-The frontend reads the API host from the `apiHost` field in `packages/sites/slo/web/site.config.js`. Edit that field directly before building.
+The frontend reads the API host from the `apiHost` field in `sites/slo/web/site.config.js`. Edit that field directly before building.
 
 ### 4.2 Install dependencies
 
@@ -386,7 +385,7 @@ npm install
 npm run build:slo
 ```
 
-The production-ready files are written to `packages/sites/slo/dist/`.
+The production-ready files are written to `sites/slo/dist/`.
 
 ### 4.4 Deploy to the server
 
@@ -394,7 +393,7 @@ Copy the built files to the directory Caddy serves:
 
 ```bash
 ssh user@yourserver "mkdir -p /var/www/sites/sgi"
-rsync -avz --delete packages/sites/slo/dist/ user@yourserver:/var/www/sites/sgi/
+rsync -avz --delete sites/slo/dist/ user@yourserver:/var/www/sites/sgi/
 ```
 
 No Caddy reload is needed — Caddy serves files directly from disk.
@@ -406,7 +405,7 @@ No Caddy reload is needed — Caddy serves files directly from disk.
 ### Backend code change
 
 ```bash
-cd packages/sites/slo
+cd sites/slo
 docker compose up -d --build api
 ```
 
@@ -427,7 +426,7 @@ python tools/gedcom-to-json.py --mode update
 rsync -avz --delete data/output user@yourserver:/var/sgi/genealogical-index/data/
 
 # 4. on server — reimport changed contributors
-cd packages/sites/slo
+cd sites/slo
 docker compose exec api python tools/import_to_db.py --mode update
 ```
 
@@ -435,7 +434,7 @@ docker compose exec api python tools/import_to_db.py --mode update
 
 ```bash
 npm run build:slo
-rsync -avz --delete packages/sites/slo/dist/ user@yourserver:/var/www/sites/sgi/
+rsync -avz --delete sites/slo/dist/ user@yourserver:/var/www/sites/sgi/
 ```
 
 ---
@@ -448,7 +447,7 @@ Start the Vite dev server (accessible on the local network):
 npm run dev:slo
 ```
 
-The dev server runs on port 1995 and hot-reloads on file changes in both `packages/core/web/` and `packages/sites/slo/web/`.
+The dev server runs on port 1995 and hot-reloads on file changes in both `core/web/` and `sites/slo/web/`.
 
 Preview the production build locally:
 

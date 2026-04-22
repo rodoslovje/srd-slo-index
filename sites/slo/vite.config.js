@@ -4,14 +4,14 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const coreWeb = path.resolve(__dirname, '../../core/web');
+const coreWeb = path.resolve(__dirname, '../core/web');
 
 function buildInfoPlugin() {
   function generate() {
     const buildTime = new Date().toISOString();
     let dataUpdated = buildTime;
     try {
-      const metaPath = path.resolve(__dirname, '../../../data/metadata.json');
+      const metaPath = path.resolve(__dirname, '../../data/metadata.json');
       dataUpdated = fs.statSync(metaPath).mtime.toISOString();
     } catch { /* fall back to build time */ }
     return `export const BUILD_TIME = ${JSON.stringify(buildTime)};\nexport const DATA_UPDATED = ${JSON.stringify(dataUpdated)};\n`;

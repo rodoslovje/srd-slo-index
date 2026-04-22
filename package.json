@@ -3,15 +3,15 @@
   "private": true,
   "version": "1.0.0",
   "workspaces": [
-    "packages/sites/*"
+    "sites/*"
   ],
   "scripts": {
-    "dev:slo": "npm run dev --workspace=packages/sites/slo",
-    "build:slo": "npm run build --workspace=packages/sites/slo",
-    "preview:slo": "npm run preview --workspace=packages/sites/slo",
-    "dev:cro": "npm run dev --workspace=packages/sites/cro",
-    "build:cro": "npm run build --workspace=packages/sites/cro",
-    "preview:cro": "npm run preview --workspace=packages/sites/cro"
+    "dev:slo": "npm run dev --workspace=sites/slo",
+    "build:slo": "npm run build --workspace=sites/slo",
+    "preview:slo": "npm run preview --workspace=sites/slo",
+    "dev:cro": "npm run dev --workspace=sites/cro",
+    "build:cro": "npm run build --workspace=sites/cro",
+    "preview:cro": "npm run preview --workspace=sites/cro"
   },
   "devDependencies": {
     "vite": "^8.0.9"
