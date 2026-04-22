@@ -2,6 +2,11 @@
 
 A searchable web application for genealogical data with a PostgreSQL database, Python FastAPI backend, and a vanilla JavaScript frontend. Designed as a monorepo that supports multiple country installations sharing the same core code but with per-site branding, translations, and configuration.
 
+## List of Genealogical Index sites
+
+- [indeks.rodoslovje.si](https://indeks.rodoslovje.si) - run by [Slovensko rodoslovno društvo](https://rodoslovje.si/)
+- [indeks.rodoslovlje.hr](https://indeks.rodoslovlje.hr) - run by [Hrvatsko rodoslovno društvo "Pavao Ritter Vitezović"](https://rodoslovlje.hr/)
+
 ## Architecture
 
 | Layer            | Technology                                      |
@@ -28,7 +33,7 @@ packages/
   core/
     web/          # Shared frontend (JS / HTML / CSS) — imports @site-config
     backend/      # Shared FastAPI application
-    tools/        # Shared GEDCOM import scripts
+    tools/        # Shared JSON import scripts
   sites/
     slo/          # Slovenia installation
       web/
@@ -44,16 +49,16 @@ data/             # Gitignored — raw GEDCOM files and extracted JSON
 
 ### Adding a new country installation
 
-1. Copy `packages/sites/slo/` to e.g. `packages/sites/hrv/`.
-2. Edit `packages/sites/hrv/web/site.config.js` — set logo, links, languages, intro texts, API host.
-3. Replace assets in `packages/sites/hrv/web/public/`.
-4. Edit `packages/sites/hrv/package.json` — set a unique `name` (e.g. `"hrv-index"`).
+1. Copy `packages/sites/slo/` to e.g. `packages/sites/cro/`.
+2. Edit `packages/sites/cro/web/site.config.js` — set logo, links, languages, intro texts, API host.
+3. Replace assets in `packages/sites/cro/web/public/`.
+4. Edit `packages/sites/cro/package.json` — set a unique `name` (e.g. `"cro-index"`).
 5. Add workspace scripts to the root `package.json`:
    ```json
-   "dev:hrv": "npm run dev --workspace=packages/sites/hrv",
-   "build:hrv": "npm run build --workspace=packages/sites/hrv"
+   "dev:cro": "npm run dev --workspace=packages/sites/cro",
+   "build:cro": "npm run build --workspace=packages/sites/cro"
    ```
-6. Set up a `docker-compose.yml` and `.env` in `packages/sites/hrv/` pointing to the new server's data directory and API host.
+6. Set up a `docker-compose.yml` and `.env` in `packages/sites/cro/` pointing to the new server's data directory and API host.
 
 ---
 
@@ -182,7 +187,7 @@ The extraction script has moved to [ged-tools](https://github.com/rodoslovje/ged
    python tools/gedcom-to-json.py --mode update
    ```
 
-   > **Windows (PowerShell):** use the full Windows path, e.g. `--data-dir C:\path\to\srd-slo-index\data`
+   > **Windows (PowerShell):** use the full Windows path, e.g. `--data-dir C:\path\to\genealogical-index\data`
 
    Output JSON files and `metadata.json` are written to `data/output/`.
 
@@ -193,7 +198,7 @@ The extraction script has moved to [ged-tools](https://github.com/rodoslovje/ged
 ### 1.3 Sync to server
 
 ```bash
-rsync -avz --delete data/output/ user@server.com:/var/sgi/srd-slo-index/data/
+rsync -avz --delete data/output/ user@server.com:/var/sgi/genealogical-index/data/
 ```
 
 > **Windows:** `rsync` is not built into Windows. Choose one of:
@@ -235,7 +240,7 @@ POSTGRES_USER=sgi_user
 POSTGRES_PASSWORD=a_strong_password_here
 
 # API hostname (without https://) — must match your Caddy config
-SGI_API_HOST=api.yourdomain.com
+API_HOST=api.yourdomain.com
 ```
 
 ### 2.3 Build and start the backend containers
@@ -285,31 +290,14 @@ This repository ships ready-made Caddy config files in `packages/sites/slo/caddy
 caddy/
 ├── docker-compose.yml   # Caddy container definition
 ├── Caddyfile            # Root config — imports conf.d/
-└── sgi.caddyfile        # This project's site block (copy to conf.d/ on server)
+├── conf.d/              # Per-service snippets — one .caddyfile per project
+│   └── sgi.caddyfile    # This project's site block
 ```
 
-Copy the `caddy/` directory to your server once (shared by all services):
+Copy the `caddy/` directory and subfolders to your server once (shared by all services):
 
 ```bash
-scp -r packages/sites/slo/caddy/ user@yourserver:/srv/caddy
-```
-
-On the server, create the `conf.d/` directory and add the SGI snippet:
-
-```bash
-mkdir -p /srv/caddy/conf.d
-cp /srv/caddy/sgi.caddyfile /srv/caddy/conf.d/sgi.caddyfile
-```
-
-The final server layout:
-
-```
-/srv/caddy/
-├── docker-compose.yml      # Caddy container
-├── Caddyfile               # Root config
-├── conf.d/                 # Per-service snippets — one .caddyfile per project
-│   └── sgi.caddyfile       # ← copied from caddy/sgi.caddyfile
-└── data/                   # Docker volume mount for Caddy TLS certs (auto-created)
+scp -r packages/sites/slo/caddy/ user@yourserver:/var/caddy
 ```
 
 ### 3.2 Root Caddyfile
@@ -328,7 +316,7 @@ The final server layout:
 Start Caddy:
 
 ```bash
-cd /srv/caddy
+cd /var/caddy
 docker compose up -d
 ```
 
@@ -353,10 +341,7 @@ yourdomain.com {
 
 # Backend API — reverse proxy to the Docker container
 api.yourdomain.com {
-    reverse_proxy sgi_api:8000 {
-        header_up Host {host}
-    }
-    header Access-Control-Allow-Origin "https://yourdomain.com"
+    reverse_proxy sgi_api:8000
     encode gzip
 }
 ```
@@ -377,7 +362,7 @@ docker exec caddy caddy validate --config /etc/caddy/Caddyfile && \
 
 ### 3.6 Adding another service later
 
-1. Drop a new `myservice.caddyfile` into `/srv/caddy/conf.d/`.
+1. Drop a new `myservice.caddyfile` into `/var/caddy/conf.d/`.
 2. Reload Caddy (step 3.5). No changes to the root `Caddyfile` or Caddy container needed.
 
 ---
@@ -408,8 +393,8 @@ The production-ready files are written to `packages/sites/slo/dist/`.
 Copy the built files to the directory Caddy serves:
 
 ```bash
-ssh user@yourserver "mkdir -p /var/www/sgi"
-rsync -avz --delete packages/sites/slo/dist/ user@yourserver:/var/www/sgi/
+ssh user@yourserver "mkdir -p /var/www/sites/sgi"
+rsync -avz --delete packages/sites/slo/dist/ user@yourserver:/var/www/sites/sgi/
 ```
 
 No Caddy reload is needed — Caddy serves files directly from disk.
@@ -439,7 +424,7 @@ python tools/gedcom-cleaner.py \
 python tools/gedcom-to-json.py --mode update --data-dir /path/to/srd-slo-index/data
 
 # 3. copy data/output/ to server (Windows: see Section 1.3 for rsync alternatives)
-rsync -avz --delete data/output/ user@yourserver:/var/sgi/srd-slo-index/data/
+rsync -avz --delete data/output/ user@yourserver:/var/sgi//data/
 
 # 4. on server — reimport changed contributors
 cd packages/sites/slo
