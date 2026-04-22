@@ -596,6 +596,17 @@ h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 
   font-size: 0.8rem;
   color: #999;
 }
+.footer-spacer {
+  flex: 1;
+}
+.footer-link {
+  color: #999;
+  text-decoration: none;
+}
+.footer-link:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
 
 /* --- Charts --- */
 .charts-container {

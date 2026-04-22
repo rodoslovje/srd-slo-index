@@ -118,7 +118,7 @@ data/             # Gitignored — raw GEDCOM files and extracted JSON
 
 Before importing, GEDCOM files should be stripped of living persons and persons who died within the last 20 years to protect privacy.
 
-Use [ged-tools](https://github.com/rodoslovje/ged-tools), which includes a `srd_index_cleanup` preset with SGI-specific rules.
+Use [ged-tools](https://github.com/rodoslovje/ged-tools), which includes a `index_cleanup_sgi` preset with SGI-specific rules.
 
 ```bash
 # Clone and set up ged-tools (one-time)
@@ -455,3 +455,9 @@ Preview the production build locally:
 ```bash
 npm run build:slo && npm run preview:slo
 ```
+
+---
+
+## License
+
+This project is released under the [MIT License](LICENSE).
