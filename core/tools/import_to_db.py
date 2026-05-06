@@ -1,6 +1,7 @@
 import argparse
 import os
 import json
+import re
 import subprocess
 import sys
 import unicodedata
@@ -39,13 +40,13 @@ def setup_full(db):
             links_count INTEGER DEFAULT 0
         );
         CREATE TABLE births (
-            id SERIAL PRIMARY KEY, name TEXT, surname TEXT, date_of_birth TEXT, place_of_birth TEXT, father_name TEXT, father_surname TEXT, mother_name TEXT, mother_surname TEXT, husbands_list TEXT, wifes_list TEXT, contributor TEXT, links TEXT
+            id SERIAL PRIMARY KEY, name TEXT, surname TEXT, date_of_birth TEXT, birth_year SMALLINT, place_of_birth TEXT, father_name TEXT, father_surname TEXT, mother_name TEXT, mother_surname TEXT, husbands_list TEXT, wifes_list TEXT, contributor TEXT, links TEXT
         );
         CREATE TABLE families (
-            id SERIAL PRIMARY KEY, husband_name TEXT, husband_surname TEXT, wife_name TEXT, wife_surname TEXT, children_list TEXT, husband_parents TEXT, wife_parents TEXT, date_of_marriage TEXT, place_of_marriage TEXT, contributor TEXT, links TEXT
+            id SERIAL PRIMARY KEY, husband_name TEXT, husband_surname TEXT, wife_name TEXT, wife_surname TEXT, children_list TEXT, husband_parents TEXT, wife_parents TEXT, date_of_marriage TEXT, marriage_year SMALLINT, place_of_marriage TEXT, contributor TEXT, links TEXT
         );
         CREATE TABLE deaths (
-            id SERIAL PRIMARY KEY, name TEXT, surname TEXT, date_of_death TEXT, place_of_death TEXT, father_name TEXT, father_surname TEXT, mother_name TEXT, mother_surname TEXT, husbands_list TEXT, wifes_list TEXT, contributor TEXT, links TEXT
+            id SERIAL PRIMARY KEY, name TEXT, surname TEXT, date_of_death TEXT, death_year SMALLINT, place_of_death TEXT, father_name TEXT, father_surname TEXT, mother_name TEXT, mother_surname TEXT, husbands_list TEXT, wifes_list TEXT, contributor TEXT, links TEXT
         );
 
         CREATE INDEX idx_birth_name_trgm ON births USING gist (name gist_trgm_ops);
@@ -61,6 +62,12 @@ def setup_full(db):
         CREATE INDEX idx_birth_contributor  ON births(contributor);
         CREATE INDEX idx_family_contributor ON families(contributor);
         CREATE INDEX idx_death_contributor  ON deaths(contributor);
+
+        -- B-tree indexes on year columns — used to pre-filter candidates by year range
+        -- before the trigram similarity join, significantly reducing the candidate set.
+        CREATE INDEX idx_birth_year   ON births(birth_year);
+        CREATE INDEX idx_family_year  ON families(marriage_year);
+        CREATE INDEX idx_death_year   ON deaths(death_year);
 
         CREATE TABLE match_jobs (
             contributor TEXT PRIMARY KEY,
@@ -159,6 +166,19 @@ def setup_update(db):
         CREATE INDEX IF NOT EXISTS idx_family_contributor ON families(contributor);
         CREATE INDEX IF NOT EXISTS idx_death_contributor  ON deaths(contributor);
 
+        ALTER TABLE births   ADD COLUMN IF NOT EXISTS birth_year   SMALLINT;
+        ALTER TABLE families ADD COLUMN IF NOT EXISTS marriage_year SMALLINT;
+        ALTER TABLE deaths   ADD COLUMN IF NOT EXISTS death_year   SMALLINT;
+
+        CREATE INDEX IF NOT EXISTS idx_birth_year   ON births(birth_year);
+        CREATE INDEX IF NOT EXISTS idx_family_year  ON families(marriage_year);
+        CREATE INDEX IF NOT EXISTS idx_death_year   ON deaths(death_year);
+
+        -- Back-fill year columns for any rows imported before this column existed.
+        UPDATE births   SET birth_year   = CAST(SUBSTRING(date_of_birth    FROM '\d{4}') AS SMALLINT) WHERE birth_year   IS NULL AND date_of_birth    ~ '\d{4}';
+        UPDATE families SET marriage_year = CAST(SUBSTRING(date_of_marriage FROM '\d{4}') AS SMALLINT) WHERE marriage_year IS NULL AND date_of_marriage ~ '\d{4}';
+        UPDATE deaths   SET death_year   = CAST(SUBSTRING(date_of_death     FROM '\d{4}') AS SMALLINT) WHERE death_year   IS NULL AND date_of_death     ~ '\d{4}';
+
         CREATE TABLE IF NOT EXISTS match_jobs (
             contributor TEXT PRIMARY KEY,
             status TEXT NOT NULL DEFAULT 'pending',
@@ -223,6 +243,14 @@ def find_data_file(directory, filename):
     return exact_path
 
 
+_YEAR_RE = re.compile(r'\d{4}')
+
+
+def _extract_year(date_str):
+    m = _YEAR_RE.search(str(date_str)) if date_str else None
+    return int(m.group()) if m else None
+
+
 def import_contributor(
     db,
     contributor_id,
@@ -285,11 +313,12 @@ def import_contributor(
                     birth["wifes_list"] = json.dumps(
                         birth["wifes_list"], ensure_ascii=False
                     )
+                birth["birth_year"] = _extract_year(birth.get("date_of_birth"))
                 db.execute(
                     text(
-                        "INSERT INTO births (name, surname, date_of_birth, place_of_birth, "
+                        "INSERT INTO births (name, surname, date_of_birth, birth_year, place_of_birth, "
                         "father_name, father_surname, mother_name, mother_surname, husbands_list, wifes_list, contributor, links) "
-                        "VALUES (:name, :surname, :date_of_birth, :place_of_birth, "
+                        "VALUES (:name, :surname, :date_of_birth, :birth_year, :place_of_birth, "
                         ":father_name, :father_surname, :mother_name, :mother_surname, :husbands_list, :wifes_list, :contributor, :links)"
                     ),
                     birth,
@@ -335,12 +364,13 @@ def import_contributor(
                     family["wife_parents"] = json.dumps(
                         family["wife_parents"], ensure_ascii=False
                     )
+                family["marriage_year"] = _extract_year(family.get("date_of_marriage"))
                 db.execute(
                     text(
                         "INSERT INTO families (husband_name, husband_surname, wife_name, wife_surname, "
-                        "children_list, husband_parents, wife_parents, date_of_marriage, place_of_marriage, contributor, links) "
+                        "children_list, husband_parents, wife_parents, date_of_marriage, marriage_year, place_of_marriage, contributor, links) "
                         "VALUES (:husband_name, :husband_surname, :wife_name, :wife_surname, "
-                        ":children_list, :husband_parents, :wife_parents, :date_of_marriage, :place_of_marriage, :contributor, :links)"
+                        ":children_list, :husband_parents, :wife_parents, :date_of_marriage, :marriage_year, :place_of_marriage, :contributor, :links)"
                     ),
                     family,
                 )
@@ -384,11 +414,12 @@ def import_contributor(
                     death["wifes_list"] = json.dumps(
                         death["wifes_list"], ensure_ascii=False
                     )
+                death["death_year"] = _extract_year(death.get("date_of_death"))
                 db.execute(
                     text(
-                        "INSERT INTO deaths (name, surname, date_of_death, place_of_death, "
+                        "INSERT INTO deaths (name, surname, date_of_death, death_year, place_of_death, "
                         "father_name, father_surname, mother_name, mother_surname, husbands_list, wifes_list, contributor, links) "
-                        "VALUES (:name, :surname, :date_of_death, :place_of_death, "
+                        "VALUES (:name, :surname, :date_of_death, :death_year, :place_of_death, "
                         ":father_name, :father_surname, :mother_name, :mother_surname, :husbands_list, :wifes_list, :contributor, :links)"
                     ),
                     death,

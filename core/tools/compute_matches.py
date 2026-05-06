@@ -79,24 +79,17 @@ _BIRTH_INSERT = text(r"""
                       AND COALESCE(b2.place_of_birth,'') != ''
                  THEN similarity(b1.place_of_birth, b2.place_of_birth)
                  ELSE NULL END AS s_place,
-            CASE WHEN b1.date_of_birth ~ '\d{4}' AND b2.date_of_birth ~ '\d{4}'
-                 THEN ABS(
-                     CAST(SUBSTRING(b1.date_of_birth FROM '\d{4}') AS INT) -
-                     CAST(SUBSTRING(b2.date_of_birth FROM '\d{4}') AS INT))
+            CASE WHEN b1.birth_year IS NOT NULL AND b2.birth_year IS NOT NULL
+                 THEN ABS(b1.birth_year - b2.birth_year)
                  ELSE NULL END AS yr_diff
         FROM births b1
         JOIN births b2
             ON  b1.contributor  = :contrib
             AND b2.contributor != :contrib
+            AND (b1.birth_year IS NULL OR b2.birth_year IS NULL
+                 OR ABS(b1.birth_year - b2.birth_year) <= :yr_tol)
             AND b1.surname % b2.surname
             AND b1.name    % b2.name
-        WHERE (
-            NOT (b1.date_of_birth ~ '\d{4}' AND b2.date_of_birth ~ '\d{4}')
-            OR ABS(
-                CAST(SUBSTRING(b1.date_of_birth FROM '\d{4}') AS INT) -
-                CAST(SUBSTRING(b2.date_of_birth FROM '\d{4}') AS INT)
-            ) <= :yr_tol
-        )
     ),
     scored AS (
         SELECT a_id, b_id, b_contrib, s_sur, s_name, s_place, yr_diff,
@@ -142,24 +135,17 @@ _FAMILY_INSERT = text(r"""
                       AND COALESCE(f2.place_of_marriage,'') != ''
                  THEN similarity(f1.place_of_marriage, f2.place_of_marriage)
                  ELSE NULL END AS s_place,
-            CASE WHEN f1.date_of_marriage ~ '\d{4}' AND f2.date_of_marriage ~ '\d{4}'
-                 THEN ABS(
-                     CAST(SUBSTRING(f1.date_of_marriage FROM '\d{4}') AS INT) -
-                     CAST(SUBSTRING(f2.date_of_marriage FROM '\d{4}') AS INT))
+            CASE WHEN f1.marriage_year IS NOT NULL AND f2.marriage_year IS NOT NULL
+                 THEN ABS(f1.marriage_year - f2.marriage_year)
                  ELSE NULL END AS yr_diff
         FROM families f1
         JOIN families f2
             ON  f1.contributor  = :contrib
             AND f2.contributor != :contrib
+            AND (f1.marriage_year IS NULL OR f2.marriage_year IS NULL
+                 OR ABS(f1.marriage_year - f2.marriage_year) <= :yr_tol)
             AND f1.husband_surname % f2.husband_surname
             AND f1.wife_surname    % f2.wife_surname
-        WHERE (
-            NOT (f1.date_of_marriage ~ '\d{4}' AND f2.date_of_marriage ~ '\d{4}')
-            OR ABS(
-                CAST(SUBSTRING(f1.date_of_marriage FROM '\d{4}') AS INT) -
-                CAST(SUBSTRING(f2.date_of_marriage FROM '\d{4}') AS INT)
-            ) <= :yr_tol
-        )
     ),
     scored AS (
         SELECT a_id, b_id, b_contrib, s_hsur, s_wsur, s_hname, s_wname, s_place, yr_diff,
@@ -203,24 +189,17 @@ _DEATH_INSERT = text(r"""
                       AND COALESCE(d2.place_of_death,'') != ''
                  THEN similarity(d1.place_of_death, d2.place_of_death)
                  ELSE NULL END AS s_place,
-            CASE WHEN d1.date_of_death ~ '\d{4}' AND d2.date_of_death ~ '\d{4}'
-                 THEN ABS(
-                     CAST(SUBSTRING(d1.date_of_death FROM '\d{4}') AS INT) -
-                     CAST(SUBSTRING(d2.date_of_death FROM '\d{4}') AS INT))
+            CASE WHEN d1.death_year IS NOT NULL AND d2.death_year IS NOT NULL
+                 THEN ABS(d1.death_year - d2.death_year)
                  ELSE NULL END AS yr_diff
         FROM deaths d1
         JOIN deaths d2
             ON  d1.contributor  = :contrib
             AND d2.contributor != :contrib
+            AND (d1.death_year IS NULL OR d2.death_year IS NULL
+                 OR ABS(d1.death_year - d2.death_year) <= :yr_tol)
             AND d1.surname % d2.surname
             AND d1.name    % d2.name
-        WHERE (
-            NOT (d1.date_of_death ~ '\d{4}' AND d2.date_of_death ~ '\d{4}')
-            OR ABS(
-                CAST(SUBSTRING(d1.date_of_death FROM '\d{4}') AS INT) -
-                CAST(SUBSTRING(d2.date_of_death FROM '\d{4}') AS INT)
-            ) <= :yr_tol
-        )
     ),
     scored AS (
         SELECT a_id, b_id, b_contrib, s_sur, s_name, s_place, yr_diff,
@@ -274,6 +253,15 @@ def _session_settings(conn):
     conn.execute(text("SET LOCAL parallel_setup_cost = 100"))
 
 
+def _run_insert(sql, label, contributor, params):
+    t0 = time.monotonic()
+    with engine.begin() as conn:
+        _session_settings(conn)
+        n = conn.execute(sql, params).rowcount
+    log.info(f"  [{contributor}] {label}: {n} matches in {time.monotonic()-t0:.1f}s")
+    return n
+
+
 def process_job(contributor):
     params = {
         "contrib":   contributor,
@@ -289,14 +277,19 @@ def process_job(contributor):
     if deleted:
         log.info(f"  [{contributor}] removed {deleted} stale matches")
 
+    # Run birth / family / death inserts in parallel — they hit different tables.
     total = 0
-    for sql, label in ((_BIRTH_INSERT, "birth"), (_FAMILY_INSERT, "family"), (_DEATH_INSERT, "death")):
-        t0 = time.monotonic()
-        with engine.begin() as conn:
-            _session_settings(conn)
-            n = conn.execute(sql, params).rowcount
-        log.info(f"  [{contributor}] {label}: {n} matches in {time.monotonic()-t0:.1f}s")
-        total += n
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        futures = {
+            pool.submit(_run_insert, sql, label, contributor, params): label
+            for sql, label in (
+                (_BIRTH_INSERT,  "birth"),
+                (_FAMILY_INSERT, "family"),
+                (_DEATH_INSERT,  "death"),
+            )
+        }
+        for f in as_completed(futures):
+            total += f.result()
 
     with engine.begin() as conn:
         conn.execute(text("""
@@ -343,6 +336,8 @@ def main(workers=2):
     # Refresh planner statistics so the query planner has accurate row-count estimates.
     # Critical after a bulk import — without this the planner may choose seq scans
     # over index scans, or under-estimate parallelism benefit.
+    # Analyzing the year columns is especially important: the planner needs their
+    # histogram to decide whether a year-range B-tree scan beats the trigram GiST scan.
     log.info("Running ANALYZE for fresh planner statistics...")
     with engine.begin() as conn:
         conn.execute(text("ANALYZE births"))
