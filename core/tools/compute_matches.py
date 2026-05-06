@@ -329,8 +329,8 @@ def main(workers=1):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Compute cross-contributor matches.")
     parser.add_argument(
-        "--workers", type=int, default=1,
-        help="Number of parallel workers (default: 1). "
+        "--workers", type=int, default=2,
+        help="Number of parallel workers (default: 2). "
              "Each claims jobs independently via SELECT FOR UPDATE SKIP LOCKED."
     )
     args = parser.parse_args()

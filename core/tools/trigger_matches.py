@@ -75,8 +75,8 @@ def main():
     parser.add_argument("--contributor", metavar="NAME", action="append", dest="contributors",
                         help="Queue a specific contributor (repeatable)")
     parser.add_argument(
-        "--workers", type=int, default=1,
-        help="Number of parallel workers for match computation (default: 1)"
+        "--workers", type=int, default=2,
+        help="Number of parallel workers for match computation (default: 2)"
     )
     args = parser.parse_args()
 
