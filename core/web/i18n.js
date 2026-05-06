@@ -9,7 +9,7 @@ const translations = {
     tab_birth: 'Birth',
     tab_family: 'Family',
     tab_death: 'Death',
-    tab_contributors: 'Contributors',
+    tab_contributors: 'Genealogists',
 
     // Search controls
     search_btn: 'Search',
@@ -21,10 +21,10 @@ const translations = {
     general_search_label: 'General',
     chart_others: 'Others',
     chart_timeline: 'Records Timeline',
-    chart_surnames_title: 'Top Surnames by Contributor',
-    contributors_filter_placeholder: 'Filter by contributor name…',
-    chart_surnames_all: 'All contributors',
-    chart_surnames_select: 'Select contributor…',
+    chart_surnames_title: 'Top Surnames by Genealogist',
+    contributors_filter_placeholder: 'Filter by genealogist name…',
+    chart_surnames_all: 'All genealogists',
+    chart_surnames_select: 'Select genealogist…',
     chart_surnames_loading: 'Loading…',
 
     // Result section headings
@@ -38,8 +38,8 @@ const translations = {
     no_results: 'No results found.',
     enter_criterion: 'Please enter at least one search criterion.',
     search_failed: 'Search failed. Check API connection.',
-    loading_contributors: 'Loading contributors...',
-    contributors_failed: 'Could not load contributor data.',
+    loading_contributors: 'Loading genealogists...',
+    contributors_failed: 'Could not load genealogist data.',
     init_error: 'Error initializing the application.',
 
     // Table column headers
@@ -49,7 +49,7 @@ const translations = {
     col_place: 'Place',
     col_date_of_birth: 'Date of Birth',
     col_place_of_birth: 'Place of Birth',
-    col_contributor: 'Contributor',
+    col_contributor: 'Genealogist',
     col_date_of_death: 'Date of Death',
     col_place_of_death: 'Place of Death',
     col_husband_name: 'Husband Name',
@@ -62,7 +62,7 @@ const translations = {
     col_children: 'Children',
     col_date_of_marriage: 'Date of Marriage',
     col_place_of_marriage: 'Place of Marriage',
-    col_contributor_ID: 'Contributor',
+    col_contributor_ID: 'Genealogist',
     col_total_births: 'Birth',
     col_total_families: 'Family',
     col_total_deaths: 'Death',
@@ -98,7 +98,7 @@ const translations = {
     tab_birth: 'Rojstvo',
     tab_family: 'Družina',
     tab_death: 'Smrt',
-    tab_contributors: 'Dajalci',
+    tab_contributors: 'Rodoslovci',
 
     // Search controls
     search_btn: 'Išči',
@@ -110,10 +110,10 @@ const translations = {
     general_search_label: 'Splošno',
     chart_others: 'Ostali',
     chart_timeline: 'Časovnica zapisov',
-    chart_surnames_title: 'Najpogostejši priimki po dajalcu',
-    contributors_filter_placeholder: 'Filtriraj po imenu dajalca…',
-    chart_surnames_all: 'Vsi dajalci',
-    chart_surnames_select: 'Izberite dajalca…',
+    chart_surnames_title: 'Najpogostejši priimki po rodoslovcu',
+    contributors_filter_placeholder: 'Filtriraj po imenu rodoslovca…',
+    chart_surnames_all: 'Vsi rodoslovci',
+    chart_surnames_select: 'Izberite rodoslovca…',
     chart_surnames_loading: 'Nalaganje…',
 
     // Result section headings
@@ -127,8 +127,8 @@ const translations = {
     no_results: 'Ni rezultatov.',
     enter_criterion: 'Vnesite vsaj eno iskalno merilo.',
     search_failed: 'Iskanje ni uspelo. Preverite povezavo z API-jem.',
-    loading_contributors: 'Nalaganje prispevkov...',
-    contributors_failed: 'Podatkov o prispevkih ni mogoče naložiti.',
+    loading_contributors: 'Nalaganje rodoslovcev...',
+    contributors_failed: 'Podatkov o rodoslovcih ni mogoče naložiti.',
     init_error: 'Napaka pri inicializaciji aplikacije.',
 
     // Table column headers
@@ -138,7 +138,7 @@ const translations = {
     col_place: 'Kraj',
     col_date_of_birth: 'Datum rojstva',
     col_place_of_birth: 'Kraj rojstva',
-    col_contributor: 'Dajalec',
+    col_contributor: 'Rodoslovec',
     col_date_of_death: 'Datum smrti',
     col_place_of_death: 'Kraj smrti',
     col_husband_name: 'Ime moža',
@@ -151,7 +151,7 @@ const translations = {
     col_children: 'Otroci',
     col_date_of_marriage: 'Datum poroke',
     col_place_of_marriage: 'Kraj poroke',
-    col_contributor_ID: 'Dajalec',
+    col_contributor_ID: 'Rodoslovec',
     col_total_births: 'Rojstvo',
     col_total_families: 'Družina',
     col_total_deaths: 'Smrt',
@@ -187,7 +187,7 @@ const translations = {
     tab_birth: 'Rođenje',
     tab_family: 'Obitelj',
     tab_death: 'Smrt',
-    tab_contributors: 'Suradnici',
+    tab_contributors: 'Rodoslovci',
 
     // Search controls
     search_btn: 'Pretraži',
@@ -199,10 +199,10 @@ const translations = {
     general_search_label: 'Opće',
     chart_others: 'Ostali',
     chart_timeline: 'Vremenski pregled zapisa',
-    chart_surnames_title: 'Najčešći prezimeni po suradniku',
-    contributors_filter_placeholder: 'Filtriraj po imenu suradnika…',
-    chart_surnames_all: 'Svi suradnici',
-    chart_surnames_select: 'Odaberi suradnika…',
+    chart_surnames_title: 'Najčešći prezimeni po rodoslovcu',
+    contributors_filter_placeholder: 'Filtriraj po imenu rodoslovca…',
+    chart_surnames_all: 'Svi rodoslovci',
+    chart_surnames_select: 'Odaberi rodoslovca…',
     chart_surnames_loading: 'Učitavanje…',
 
     // Result section headings
@@ -216,8 +216,8 @@ const translations = {
     no_results: 'Nema rezultata.',
     enter_criterion: 'Unesite barem jedan kriterij pretrage.',
     search_failed: 'Pretraga nije uspjela. Provjerite API vezu.',
-    loading_contributors: 'Učitavanje suradnika...',
-    contributors_failed: 'Nije moguće učitati podatke o suradnicima.',
+    loading_contributors: 'Učitavanje rodoslovaca...',
+    contributors_failed: 'Nije moguće učitati podatke o rodoslovcima.',
     init_error: 'Greška pri inicijalizaciji aplikacije.',
 
     // Table column headers
@@ -227,7 +227,7 @@ const translations = {
     col_place: 'Mjesto',
     col_date_of_birth: 'Datum rođenja',
     col_place_of_birth: 'Mjesto rođenja',
-    col_contributor: 'Suradnik',
+    col_contributor: 'Rodoslovac',
     col_date_of_death: 'Datum smrti',
     col_place_of_death: 'Mjesto smrti',
     col_husband_name: 'Ime muža',
@@ -240,7 +240,7 @@ const translations = {
     col_children: 'Djeca',
     col_date_of_marriage: 'Datum vjenčanja',
     col_place_of_marriage: 'Mjesto vjenčanja',
-    col_contributor_ID: 'Suradnik',
+    col_contributor_ID: 'Rodoslovac',
     col_total_births: 'Rođenje',
     col_total_families: 'Obitelj',
     col_total_deaths: 'Smrt',
@@ -276,7 +276,7 @@ const translations = {
     tab_birth: 'Geburt',
     tab_family: 'Familie',
     tab_death: 'Tod',
-    tab_contributors: 'Beitragende',
+    tab_contributors: 'Genealogen',
 
     // Search controls
     search_btn: 'Suchen',
@@ -288,10 +288,10 @@ const translations = {
     general_search_label: 'Allgemein',
     chart_others: 'Andere',
     chart_timeline: 'Zeitverlauf der Einträge',
-    chart_surnames_title: 'Häufigste Nachnamen nach Beitragendem',
-    contributors_filter_placeholder: 'Nach Beitragendem filtern…',
-    chart_surnames_all: 'Alle Beitragenden',
-    chart_surnames_select: 'Beitragenden auswählen…',
+    chart_surnames_title: 'Häufigste Nachnamen nach Genealoge',
+    contributors_filter_placeholder: 'Nach Genealogen filtern…',
+    chart_surnames_all: 'Alle Genealogen',
+    chart_surnames_select: 'Genealogen auswählen…',
     chart_surnames_loading: 'Laden…',
 
     // Result section headings
@@ -305,8 +305,8 @@ const translations = {
     no_results: 'Keine Ergebnisse gefunden.',
     enter_criterion: 'Bitte mindestens ein Suchkriterium eingeben.',
     search_failed: 'Suche fehlgeschlagen. API-Verbindung prüfen.',
-    loading_contributors: 'Beitragende werden geladen...',
-    contributors_failed: 'Daten der Beitragenden konnten nicht geladen werden.',
+    loading_contributors: 'Genealogen werden geladen...',
+    contributors_failed: 'Daten der Genealogen konnten nicht geladen werden.',
     init_error: 'Fehler beim Initialisieren der Anwendung.',
 
     // Table column headers
@@ -316,7 +316,7 @@ const translations = {
     col_place: 'Ort',
     col_date_of_birth: 'Geburtsdatum',
     col_place_of_birth: 'Geburtsort',
-    col_contributor: 'Beitragender',
+    col_contributor: 'Genealoge',
     col_date_of_death: 'Sterbedatum',
     col_place_of_death: 'Sterbeort',
     col_husband_name: 'Vorname des Mannes',
@@ -329,7 +329,7 @@ const translations = {
     col_children: 'Kinder',
     col_date_of_marriage: 'Heiratsdatum',
     col_place_of_marriage: 'Heiratsort',
-    col_contributor_ID: 'Beitragender',
+    col_contributor_ID: 'Genealoge',
     col_total_births: 'Geburt',
     col_total_families: 'Familie',
     col_total_deaths: 'Tod',
@@ -365,7 +365,7 @@ const translations = {
     tab_birth: 'Születés',
     tab_family: 'Család',
     tab_death: 'Halál',
-    tab_contributors: 'Közreműködők',
+    tab_contributors: 'Genealógusok',
 
     // Search controls
     search_btn: 'Keresés',
@@ -377,10 +377,10 @@ const translations = {
     general_search_label: 'Általános',
     chart_others: 'Mások',
     chart_timeline: 'Rekordok időrendje',
-    chart_surnames_title: 'Leggyakoribb vezetéknevek közreműködőnként',
-    contributors_filter_placeholder: 'Szűrés közreműködő neve szerint…',
-    chart_surnames_all: 'Összes közreműködő',
-    chart_surnames_select: 'Válasszon közreműködőt…',
+    chart_surnames_title: 'Leggyakoribb vezetéknevek genealógusonként',
+    contributors_filter_placeholder: 'Szűrés genealógus neve szerint…',
+    chart_surnames_all: 'Összes genealógus',
+    chart_surnames_select: 'Válasszon genealógust…',
     chart_surnames_loading: 'Betöltés…',
 
     // Result section headings
@@ -394,8 +394,8 @@ const translations = {
     no_results: 'Nincs találat.',
     enter_criterion: 'Kérjük, adjon meg legalább egy keresési feltételt.',
     search_failed: 'A keresés sikertelen. Ellenőrizze az API-kapcsolatot.',
-    loading_contributors: 'Közreműködők betöltése...',
-    contributors_failed: 'A közreműködők adatait nem sikerült betölteni.',
+    loading_contributors: 'Genealógusok betöltése...',
+    contributors_failed: 'A genealógusok adatait nem sikerült betölteni.',
     init_error: 'Hiba az alkalmazás inicializálásakor.',
 
     // Table column headers
@@ -405,7 +405,7 @@ const translations = {
     col_place: 'Helyszín',
     col_date_of_birth: 'Születési dátum',
     col_place_of_birth: 'Születési hely',
-    col_contributor: 'Közreműködő',
+    col_contributor: 'Genealógus',
     col_date_of_death: 'Halál dátuma',
     col_place_of_death: 'Halál helye',
     col_husband_name: 'Férj utóneve',
@@ -418,7 +418,7 @@ const translations = {
     col_children: 'Gyermekek',
     col_date_of_marriage: 'Házasságkötés dátuma',
     col_place_of_marriage: 'Házasságkötés helye',
-    col_contributor_ID: 'Közreműködő',
+    col_contributor_ID: 'Genealógus',
     col_total_births: 'Születés',
     col_total_families: 'Család',
     col_total_deaths: 'Halál',
@@ -454,7 +454,7 @@ const translations = {
     tab_birth: 'Nascita',
     tab_family: 'Famiglia',
     tab_death: 'Morte',
-    tab_contributors: 'Collaboratori',
+    tab_contributors: 'Genealogisti',
 
     // Search controls
     search_btn: 'Cerca',
@@ -466,10 +466,10 @@ const translations = {
     general_search_label: 'Generale',
     chart_others: 'Altri',
     chart_timeline: 'Cronologia dei record',
-    chart_surnames_title: 'Cognomi più frequenti per collaboratore',
-    contributors_filter_placeholder: 'Filtra per nome collaboratore…',
-    chart_surnames_all: 'Tutti i collaboratori',
-    chart_surnames_select: 'Seleziona collaboratore…',
+    chart_surnames_title: 'Cognomi più frequenti per genealogista',
+    contributors_filter_placeholder: 'Filtra per nome genealogista…',
+    chart_surnames_all: 'Tutti i genealogisti',
+    chart_surnames_select: 'Seleziona genealogista…',
     chart_surnames_loading: 'Caricamento…',
 
     // Result section headings
@@ -483,8 +483,8 @@ const translations = {
     no_results: 'Nessun risultato trovato.',
     enter_criterion: 'Inserisci almeno un criterio di ricerca.',
     search_failed: 'Ricerca fallita. Controlla la connessione API.',
-    loading_contributors: 'Caricamento collaboratori...',
-    contributors_failed: 'Impossibile caricare i dati dei collaboratori.',
+    loading_contributors: 'Caricamento genealogisti...',
+    contributors_failed: 'Impossibile caricare i dati dei genealogisti.',
     init_error: 'Errore durante l\'inizializzazione dell\'applicazione.',
 
     // Table column headers
@@ -494,7 +494,7 @@ const translations = {
     col_place: 'Luogo',
     col_date_of_birth: 'Data di nascita',
     col_place_of_birth: 'Luogo di nascita',
-    col_contributor: 'Collaboratore',
+    col_contributor: 'Genealogista',
     col_date_of_death: 'Data di morte',
     col_place_of_death: 'Luogo di morte',
     col_husband_name: 'Nome del marito',
@@ -507,7 +507,7 @@ const translations = {
     col_children: 'Figli',
     col_date_of_marriage: 'Data di matrimonio',
     col_place_of_marriage: 'Luogo di matrimonio',
-    col_contributor_ID: 'Collaboratore',
+    col_contributor_ID: 'Genealogista',
     col_total_births: 'Nascita',
     col_total_families: 'Famiglia',
     col_total_deaths: 'Morte',
