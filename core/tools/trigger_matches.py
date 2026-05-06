@@ -8,8 +8,11 @@ Usage:
     # One contributor
     docker compose exec api python tools/trigger_matches.py --contributor "Smith"
 
-    # Multiple contributors
-    docker compose exec api python tools/trigger_matches.py --contributor "Smith" --contributor "Jones"
+    # Stop running computation (marks jobs stopped, cancels active queries)
+    docker compose exec api python tools/trigger_matches.py --stop
+
+    # Clear pending jobs without running them
+    docker compose exec api python tools/trigger_matches.py --clear
 
 Without arguments, prints current job queue status.
 """
@@ -47,7 +50,8 @@ def queue_contributors(db, contributors):
             text("""
                 INSERT INTO match_jobs (contributor, status, queued_at)
                 VALUES (:c, 'pending', NOW())
-                ON CONFLICT (contributor) DO UPDATE SET status = 'pending', queued_at = NOW()
+                ON CONFLICT (contributor) DO UPDATE
+                    SET status = 'pending', queued_at = NOW()
             """),
             {"c": c},
         )
@@ -82,6 +86,12 @@ def main():
         "--clear", action="store_true",
         help="Remove all pending jobs from the queue without running them"
     )
+    parser.add_argument(
+        "--stop", action="store_true",
+        help="Mark running and pending jobs as stopped; also cancels their active "
+             "PostgreSQL queries so the compute_matches process exits after the "
+             "current INSERT finishes"
+    )
     args = parser.parse_args()
 
     db = SessionLocal()
@@ -92,6 +102,27 @@ def main():
             ).rowcount
             db.commit()
             print(f"Cleared {n} pending job(s) from queue.")
+            return
+
+        if args.stop:
+            # Mark pending and running jobs as stopped so workers find nothing to claim
+            n = db.execute(
+                text("UPDATE match_jobs SET status = 'stopped' WHERE status IN ('pending', 'running')")
+            ).rowcount
+            db.commit()
+            # Cancel any active PostgreSQL queries belonging to compute_matches workers
+            cancelled = db.execute(text("""
+                SELECT COUNT(*) FROM (
+                    SELECT pg_cancel_backend(pid)
+                    FROM pg_stat_activity
+                    WHERE query LIKE '%INSERT INTO matches%'
+                      AND state = 'active'
+                      AND pid <> pg_backend_pid()
+                ) AS q
+            """)).scalar()
+            db.commit()
+            print(f"Stopped {n} job(s). Cancelled {cancelled} active query/queries.")
+            print("Workers will exit after their current INSERT completes.")
             return
 
         if not args.all and not args.contributors:
