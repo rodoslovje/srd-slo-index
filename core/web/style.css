@@ -608,6 +608,55 @@ h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 
   text-decoration: underline;
 }
 
+/* --- Matches page --- */
+.matches-page-header {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.matches-back-link {
+  color: var(--secondary);
+  text-decoration: none;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+.matches-back-link:hover { text-decoration: underline; }
+.matches-page-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+.matches-active-row td { background: #eaf4fb; }
+.matches-detail-section { margin-top: 28px; }
+.matches-detail-heading {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--primary);
+}
+.matches-detail-table {
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  width: 100%;
+}
+.matches-detail-table th,
+.matches-detail-table td {
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  text-align: left;
+}
+.matches-detail-table th { background: var(--bg); font-weight: 600; }
+.match-conf {
+  text-align: center;
+  font-weight: 600;
+  color: var(--secondary);
+  vertical-align: middle;
+}
+.match-row-a td { background: #f7fbff; }
+.match-row-b td { background: #fff; border-top: none; }
+
 /* --- Connections panel --- */
 .connections-table {
   font-size: 0.78rem;

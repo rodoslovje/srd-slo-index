@@ -82,11 +82,16 @@ const translations = {
     icon_matricula: 'Matricula Online',
     icon_dlib: 'Digital Library of Slovenia',
 
-    // Connections
-    col_connections: 'Connections',
-    connections_loading: 'Loading…',
-    connections_none: 'No connections found.',
-    connections_confidence: 'Confidence',
+    // Matches
+    col_matches: 'Matches',
+    matches_loading: 'Loading…',
+    matches_none: 'No matches found.',
+    matches_confidence: 'Confidence',
+    matches_for: 'Matches for',
+    back_to_genealogists: 'Genealogists',
+    matches_births: 'Births',
+    matches_families: 'Families',
+    matches_deaths: 'Deaths',
 
     // Footer
     footer_version: 'Version',
@@ -171,11 +176,16 @@ const translations = {
     icon_matricula: 'Matricula Online',
     icon_dlib: 'Digitalna knjižnica Slovenije',
 
-    // Connections
-    col_connections: 'Povezave',
-    connections_loading: 'Nalaganje…',
-    connections_none: 'Ni najdenih povezav.',
-    connections_confidence: 'Zaupanje',
+    // Matches
+    col_matches: 'Ujemanja',
+    matches_loading: 'Nalaganje…',
+    matches_none: 'Ni najdenih ujemanj.',
+    matches_confidence: 'Zaupanje',
+    matches_for: 'Ujemanja za',
+    back_to_genealogists: 'Rodoslovci',
+    matches_births: 'Rojstva',
+    matches_families: 'Družine',
+    matches_deaths: 'Smrti',
 
     // Footer
     footer_version: 'Različica',
@@ -260,11 +270,16 @@ const translations = {
     icon_matricula: 'Matricula Online',
     icon_dlib: 'Digitalna knjižnica Slovenije',
 
-    // Connections
-    col_connections: 'Veze',
-    connections_loading: 'Učitavanje…',
-    connections_none: 'Nema pronađenih veza.',
-    connections_confidence: 'Pouzdanost',
+    // Matches
+    col_matches: 'Podudaranja',
+    matches_loading: 'Učitavanje…',
+    matches_none: 'Nema pronađenih podudaranja.',
+    matches_confidence: 'Pouzdanost',
+    matches_for: 'Podudaranja za',
+    back_to_genealogists: 'Rodoslovci',
+    matches_births: 'Rođenja',
+    matches_families: 'Obitelji',
+    matches_deaths: 'Smrti',
 
     // Footer
     footer_version: 'Verzija',
@@ -349,11 +364,16 @@ const translations = {
     icon_matricula: 'Matricula Online',
     icon_dlib: 'Digitale Bibliothek Sloweniens',
 
-    // Connections
-    col_connections: 'Verbindungen',
-    connections_loading: 'Laden…',
-    connections_none: 'Keine Verbindungen gefunden.',
-    connections_confidence: 'Konfidenz',
+    // Matches
+    col_matches: 'Übereinstimmungen',
+    matches_loading: 'Laden…',
+    matches_none: 'Keine Übereinstimmungen gefunden.',
+    matches_confidence: 'Konfidenz',
+    matches_for: 'Übereinstimmungen für',
+    back_to_genealogists: 'Genealogen',
+    matches_births: 'Geburten',
+    matches_families: 'Familien',
+    matches_deaths: 'Sterbefälle',
 
     // Footer
     footer_version: 'Version',
@@ -438,11 +458,16 @@ const translations = {
     icon_matricula: 'Matricula Online',
     icon_dlib: 'Szlovénia Digitális Könyvtára',
 
-    // Connections
-    col_connections: 'Kapcsolatok',
-    connections_loading: 'Betöltés…',
-    connections_none: 'Nem találhatók kapcsolatok.',
-    connections_confidence: 'Megbízhatóság',
+    // Matches
+    col_matches: 'Egyezések',
+    matches_loading: 'Betöltés…',
+    matches_none: 'Nem találhatók egyezések.',
+    matches_confidence: 'Megbízhatóság',
+    matches_for: 'Egyezések:',
+    back_to_genealogists: 'Genealógusok',
+    matches_births: 'Születések',
+    matches_families: 'Családok',
+    matches_deaths: 'Halálozások',
 
     // Footer
     footer_version: 'Verzió',
@@ -527,11 +552,16 @@ const translations = {
     icon_matricula: 'Matricula Online',
     icon_dlib: 'Biblioteca digitale della Slovenia',
 
-    // Connections
-    col_connections: 'Connessioni',
-    connections_loading: 'Caricamento…',
-    connections_none: 'Nessuna connessione trovata.',
-    connections_confidence: 'Confidenza',
+    // Matches
+    col_matches: 'Corrispondenze',
+    matches_loading: 'Caricamento…',
+    matches_none: 'Nessuna corrispondenza trovata.',
+    matches_confidence: 'Confidenza',
+    matches_for: 'Corrispondenze per',
+    back_to_genealogists: 'Genealogisti',
+    matches_births: 'Nascite',
+    matches_families: 'Famiglie',
+    matches_deaths: 'Morti',
 
     // Footer
     footer_version: 'Versione',

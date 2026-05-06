@@ -266,14 +266,13 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         } else {
           html += '<td></td>';
         }
-      } else if (col === 'connections') {
+      } else if (col === 'matches') {
         const name = row.contributor_ID || '';
-        html += `<td class="col-center">
-          <details class="expandable-cell connections-cell" data-contributor="${name}">
-            <summary title="${t('col_connections')}">🔗</summary>
-            <div class="expanded-content connections-content"></div>
-          </details>
-        </td>`;
+        const count = row.matches_count || 0;
+        const cell = count > 0
+          ? `<a href="?t=contributors&matches=${encodeURIComponent(name)}" data-spa-nav>${count}</a>`
+          : '—';
+        html += `<td class="col-center">${cell}</td>`;
       } else if (col === 'contributor_ID') {
         const name = row[col] || '';
         const url = row._url || '';

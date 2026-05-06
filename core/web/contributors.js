@@ -2,7 +2,7 @@ import { t } from './i18n.js';
 import { renderTable } from './table.js';
 import { API_BASE_URL } from './config.js';
 
-const contributorColumns = ['contributor_ID', 'total_births', 'total_families', 'total_deaths', 'total', 'total_links', 'last_modified', 'connections'];
+const contributorColumns = ['contributor_ID', 'total_births', 'total_families', 'total_deaths', 'total', 'total_links', 'last_modified', 'matches'];
 let cachedData = null;
 let fetchPromise = null;
 let chartInstance = null;
@@ -10,6 +10,9 @@ let chartInstance = null;
 let timelineData = null;
 let timelinePromise = null;
 let timelineChartInstance = null;
+
+let matchCountsData = null;
+let matchCountsPromise = null;
 
 function ensureData() {
   if (cachedData) return Promise.resolve(cachedData);
@@ -43,9 +46,29 @@ function ensureTimelineData() {
   return timelinePromise;
 }
 
+function ensureMatchCounts() {
+  if (matchCountsData) return Promise.resolve(matchCountsData);
+  if (!matchCountsPromise) {
+    matchCountsPromise = fetch(`${API_BASE_URL}/api/matches/counts`)
+      .then(r => r.json())
+      .then(data => {
+        matchCountsData = Object.fromEntries(data.map(d => [d.contributor, d.partners_count]));
+        return matchCountsData;
+      })
+      .catch(() => { matchCountsData = {}; return matchCountsData; });
+  }
+  return matchCountsPromise;
+}
+
+function enrichWithMatchCounts(data) {
+  if (!matchCountsData) return data;
+  return data.map(d => ({ ...d, matches_count: matchCountsData[d.contributor_ID] || 0 }));
+}
+
 export function prefetchContributors() {
   ensureData().catch(() => {});
   ensureTimelineData().catch(() => {});
+  ensureMatchCounts().catch(() => {});
 }
 
 export function getContributorUrlMap() {
@@ -91,20 +114,35 @@ function filterContributorData(data) {
 }
 
 export async function renderContributors() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const matchesFor = urlParams.get('matches');
+  const withPartner = urlParams.get('with');
+
+  const chartsContainer = document.getElementById('charts-container');
+  const surnameCloudSection = document.getElementById('surname-cloud-section');
+
+  if (matchesFor) {
+    if (chartsContainer) chartsContainer.style.display = 'none';
+    if (surnameCloudSection) surnameCloudSection.style.display = 'none';
+    await renderMatchesPage(matchesFor, withPartner);
+    return;
+  }
+
+  if (chartsContainer) chartsContainer.style.display = 'grid';
+  if (surnameCloudSection) surnameCloudSection.style.display = '';
+
   const container = document.getElementById('table-contributors');
   container.innerHTML = `<p>${t('loading_contributors')}</p>`;
 
   try {
-    const [data, timeline] = await Promise.all([ensureData(), ensureTimelineData()]);
-
-    const chartsContainer = document.getElementById('charts-container');
-    if (chartsContainer) chartsContainer.style.display = 'grid';
+    const [data, timeline, counts] = await Promise.all([
+      ensureData(), ensureTimelineData(), ensureMatchCounts(),
+    ]);
 
     renderChart(data);
     renderTimelineChart(timeline);
-    const initialFiltered = filterContributorData(data);
+    const initialFiltered = enrichWithMatchCounts(filterContributorData(data));
     renderTable(initialFiltered, 'table-contributors', contributorColumns, 'total', false);
-    initConnectionsPanel('table-contributors');
     loadSurnameCloud(initialFiltered.map(d => d.contributor_ID));
 
     const input = document.getElementById('contributors-query');
@@ -112,9 +150,8 @@ export async function renderContributors() {
       input.dataset.bound = '1';
       input.addEventListener('input', () => {
         if (cachedData) {
-          const filtered = filterContributorData(cachedData);
+          const filtered = enrichWithMatchCounts(filterContributorData(cachedData));
           renderTable(filtered, 'table-contributors', contributorColumns, 'total', false);
-          initConnectionsPanel('table-contributors');
           loadSurnameCloud(filtered.map(d => d.contributor_ID));
         }
       });
@@ -330,59 +367,127 @@ async function loadSurnameCloud(contributors) {
   }
 }
 
-function renderConnectionsTable(matches) {
-  const rows = matches.map(m => `
-    <tr>
-      <td>${m.contributor}</td>
-      <td>${m.births_count || 0}</td>
-      <td>${m.families_count || 0}</td>
-      <td>${m.deaths_count || 0}</td>
-      <td>${m.total_count}</td>
-      <td>${Math.round((m.max_confidence || 0) * 100)}%</td>
-    </tr>`).join('');
-  return `<table class="connections-table">
-    <thead><tr>
-      <th>${t('col_contributor_ID')}</th>
-      <th>${t('col_total_births')}</th>
-      <th>${t('col_total_families')}</th>
-      <th>${t('col_total_deaths')}</th>
-      <th>${t('col_total')}</th>
-      <th>${t('connections_confidence')}</th>
-    </tr></thead>
-    <tbody>${rows}</tbody>
-  </table>`;
+async function renderMatchesPage(contributor, withPartner) {
+  const container = document.getElementById('table-contributors');
+  container.innerHTML = `<p>${t('matches_loading')}</p>`;
+
+  let partners;
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/contributors/${encodeURIComponent(contributor)}/matches`);
+    partners = await res.json();
+  } catch {
+    container.innerHTML = `<p>${t('search_failed')}</p>`;
+    return;
+  }
+
+  const backHref = '?t=contributors';
+  const heading = `<div class="matches-page-header">
+    <a href="${backHref}" data-spa-nav class="matches-back-link">← ${t('back_to_genealogists')}</a>
+    <h2 class="matches-page-title">${t('matches_for')} <em>${contributor}</em></h2>
+  </div>`;
+
+  if (!partners.length) {
+    container.innerHTML = heading + `<p>${t('matches_none')}</p>`;
+    return;
+  }
+
+  const rows = partners.map(p => {
+    const href = `?t=contributors&matches=${encodeURIComponent(contributor)}&with=${encodeURIComponent(p.contributor)}`;
+    const active = withPartner === p.contributor ? ' class="matches-active-row"' : '';
+    return `<tr${active}>
+      <td><a href="${href}" data-spa-nav>${p.contributor}</a></td>
+      <td>${p.births_count || 0}</td>
+      <td>${p.families_count || 0}</td>
+      <td>${p.deaths_count || 0}</td>
+      <td>${p.total_count}</td>
+      <td>${Math.round((p.max_confidence || 0) * 100)}%</td>
+    </tr>`;
+  }).join('');
+
+  const summaryTable = `<div class="matches-summary">
+    <table class="connections-table">
+      <thead><tr>
+        <th>${t('col_contributor_ID')}</th>
+        <th>${t('col_total_births')}</th>
+        <th>${t('col_total_families')}</th>
+        <th>${t('col_total_deaths')}</th>
+        <th>${t('col_total')}</th>
+        <th>${t('matches_confidence')}</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+
+  container.innerHTML = heading + summaryTable + '<div id="matches-detail"></div>';
+
+  if (withPartner) {
+    renderMatchDetail(contributor, withPartner);
+  }
 }
 
-function initConnectionsPanel(containerId) {
-  const container = document.getElementById(containerId);
-  if (!container) return;
-  container.querySelectorAll('.connections-cell').forEach(details => {
-    details.addEventListener('toggle', async () => {
-      if (!details.open || details.dataset.loaded) return;
-      details.dataset.loaded = '1';
-      const name = details.dataset.contributor;
-      const content = details.querySelector('.connections-content');
-      content.innerHTML = `<em>${t('connections_loading')}</em>`;
-      try {
-        const res = await fetch(`${API_BASE_URL}/api/contributors/${encodeURIComponent(name)}/matches`);
-        const data = await res.json();
-        content.innerHTML = data.length
-          ? renderConnectionsTable(data)
-          : `<em>${t('connections_none')}</em>`;
-      } catch {
-        content.innerHTML = `<em>${t('search_failed')}</em>`;
-      }
-    });
-  });
+async function renderMatchDetail(contributor, partner) {
+  const detailEl = document.getElementById('matches-detail');
+  if (!detailEl) return;
+  detailEl.innerHTML = `<p>${t('matches_loading')}</p>`;
+
+  let records;
+  try {
+    const res = await fetch(
+      `${API_BASE_URL}/api/contributors/${encodeURIComponent(contributor)}/matches/${encodeURIComponent(partner)}`
+    );
+    records = await res.json();
+  } catch {
+    detailEl.innerHTML = `<p>${t('search_failed')}</p>`;
+    return;
+  }
+
+  if (!records.length) {
+    detailEl.innerHTML = `<p>${t('matches_none')}</p>`;
+    return;
+  }
+
+  const byType = { birth: [], family: [], death: [] };
+  records.forEach(r => byType[r.record_type]?.push(r));
+
+  const typeConfig = [
+    { key: 'birth',  label: t('matches_births'),   fields: ['name', 'surname', 'date', 'place'] },
+    { key: 'family', label: t('matches_families'),  fields: ['husband_name', 'husband_surname', 'wife_name', 'wife_surname', 'date', 'place'] },
+    { key: 'death',  label: t('matches_deaths'),    fields: ['name', 'surname', 'date', 'place'] },
+  ];
+
+  let html = `<div class="matches-detail-section">
+    <h3 class="matches-detail-heading">${contributor} × ${partner}</h3>`;
+
+  for (const { key, label, fields } of typeConfig) {
+    const group = byType[key];
+    if (!group.length) continue;
+
+    const headerCells = fields.map(f => `<th>${f.replace(/_/g, ' ')}</th>`).join('');
+    const groupRows = group.map(r => {
+      const aCells = fields.map(f => `<td>${r.record_a[f] || ''}</td>`).join('');
+      const bCells = fields.map(f => `<td>${r.record_b[f] || ''}</td>`).join('');
+      const conf = Math.round((r.confidence || 0) * 100);
+      return `<tr class="match-row-a"><td rowspan="2" class="match-conf">${conf}%</td>${aCells}</tr>
+              <tr class="match-row-b">${bCells}</tr>`;
+    }).join('');
+
+    html += `<h4>${label} (${group.length})</h4>
+    <div class="table-responsive">
+      <table class="matches-detail-table">
+        <thead><tr><th>${t('matches_confidence')}</th>${headerCells}</tr></thead>
+        <tbody>${groupRows}</tbody>
+      </table>
+    </div>`;
+  }
+
+  html += '</div>';
+  detailEl.innerHTML = html;
+  detailEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-/** Re-renders the contributors table if it is currently visible (re-translates column headers). */
+/** Re-renders the contributors view if it is currently active (e.g. after language change). */
 export function refreshContributorsIfVisible() {
-  if (cachedData && document.getElementById('tab-contributors').classList.contains('active')) {
-    renderChart(cachedData);
-    if (timelineData) renderTimelineChart(timelineData);
-    renderTable(cachedData, 'table-contributors', contributorColumns, 'total', false);
-    initConnectionsPanel('table-contributors');
-    populateSurnameSelect(cachedData);
+  if (document.getElementById('tab-contributors').classList.contains('active')) {
+    renderContributors();
   }
 }

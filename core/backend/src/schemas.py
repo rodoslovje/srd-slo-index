@@ -105,3 +105,8 @@ class MatchPartner(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class MatchCount(BaseModel):
+    contributor: str
+    partners_count: int = 0

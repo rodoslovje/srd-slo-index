@@ -24,6 +24,86 @@ _timeline_cache = {"data": None, "time": 0}
 _surnames_cache = {}  # keyed by contributor name (or "" for all)
 
 
+def get_match_counts(db: Session):
+    rows = db.execute(text("""
+        SELECT contributor_a AS contributor, COUNT(DISTINCT contributor_b) AS partners_count
+        FROM matches
+        GROUP BY contributor_a
+    """)).fetchall()
+    return [dict(r._mapping) for r in rows]
+
+
+def get_contributor_match_detail(db: Session, contributor_a: str, contributor_b: str):
+    results = []
+
+    birth_rows = db.execute(text("""
+        SELECT m.confidence, m.match_fields,
+               b1.id AS a_id, b1.name AS a_name, b1.surname AS a_surname,
+               b1.date_of_birth AS a_date, b1.place_of_birth AS a_place,
+               b2.id AS b_id, b2.name AS b_name, b2.surname AS b_surname,
+               b2.date_of_birth AS b_date, b2.place_of_birth AS b_place
+        FROM matches m
+        JOIN births b1 ON m.record_a_id = b1.id
+        JOIN births b2 ON m.record_b_id = b2.id
+        WHERE m.contributor_a = :a AND m.contributor_b = :b AND m.record_type = 'birth'
+        ORDER BY m.confidence DESC
+    """), {"a": contributor_a, "b": contributor_b}).fetchall()
+    for r in birth_rows:
+        results.append({
+            "record_type": "birth",
+            "confidence": r.confidence,
+            "match_fields": r.match_fields,
+            "record_a": {"id": r.a_id, "name": r.a_name, "surname": r.a_surname, "date": r.a_date, "place": r.a_place},
+            "record_b": {"id": r.b_id, "name": r.b_name, "surname": r.b_surname, "date": r.b_date, "place": r.b_place},
+        })
+
+    family_rows = db.execute(text("""
+        SELECT m.confidence, m.match_fields,
+               f1.id AS a_id, f1.husband_name AS a_hname, f1.husband_surname AS a_hsur,
+               f1.wife_name AS a_wname, f1.wife_surname AS a_wsur,
+               f1.date_of_marriage AS a_date, f1.place_of_marriage AS a_place,
+               f2.id AS b_id, f2.husband_name AS b_hname, f2.husband_surname AS b_hsur,
+               f2.wife_name AS b_wname, f2.wife_surname AS b_wsur,
+               f2.date_of_marriage AS b_date, f2.place_of_marriage AS b_place
+        FROM matches m
+        JOIN families f1 ON m.record_a_id = f1.id
+        JOIN families f2 ON m.record_b_id = f2.id
+        WHERE m.contributor_a = :a AND m.contributor_b = :b AND m.record_type = 'family'
+        ORDER BY m.confidence DESC
+    """), {"a": contributor_a, "b": contributor_b}).fetchall()
+    for r in family_rows:
+        results.append({
+            "record_type": "family",
+            "confidence": r.confidence,
+            "match_fields": r.match_fields,
+            "record_a": {"id": r.a_id, "husband_name": r.a_hname, "husband_surname": r.a_hsur, "wife_name": r.a_wname, "wife_surname": r.a_wsur, "date": r.a_date, "place": r.a_place},
+            "record_b": {"id": r.b_id, "husband_name": r.b_hname, "husband_surname": r.b_hsur, "wife_name": r.b_wname, "wife_surname": r.b_wsur, "date": r.b_date, "place": r.b_place},
+        })
+
+    death_rows = db.execute(text("""
+        SELECT m.confidence, m.match_fields,
+               d1.id AS a_id, d1.name AS a_name, d1.surname AS a_surname,
+               d1.date_of_death AS a_date, d1.place_of_death AS a_place,
+               d2.id AS b_id, d2.name AS b_name, d2.surname AS b_surname,
+               d2.date_of_death AS b_date, d2.place_of_death AS b_place
+        FROM matches m
+        JOIN deaths d1 ON m.record_a_id = d1.id
+        JOIN deaths d2 ON m.record_b_id = d2.id
+        WHERE m.contributor_a = :a AND m.contributor_b = :b AND m.record_type = 'death'
+        ORDER BY m.confidence DESC
+    """), {"a": contributor_a, "b": contributor_b}).fetchall()
+    for r in death_rows:
+        results.append({
+            "record_type": "death",
+            "confidence": r.confidence,
+            "match_fields": r.match_fields,
+            "record_a": {"id": r.a_id, "name": r.a_name, "surname": r.a_surname, "date": r.a_date, "place": r.a_place},
+            "record_b": {"id": r.b_id, "name": r.b_name, "surname": r.b_surname, "date": r.b_date, "place": r.b_place},
+        })
+
+    return results
+
+
 def get_contributor_matches(db: Session, contributor: str):
     rows = db.execute(
         text("""
