@@ -74,6 +74,10 @@ def main():
     parser.add_argument("--all", action="store_true", help="Queue all contributors")
     parser.add_argument("--contributor", metavar="NAME", action="append", dest="contributors",
                         help="Queue a specific contributor (repeatable)")
+    parser.add_argument(
+        "--workers", type=int, default=1,
+        help="Number of parallel workers for match computation (default: 1)"
+    )
     args = parser.parse_args()
 
     db = SessionLocal()
@@ -113,7 +117,7 @@ def main():
     # Run compute_matches directly in the same process
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     import compute_matches
-    compute_matches.main()
+    compute_matches.main(workers=args.workers)
 
 
 if __name__ == "__main__":

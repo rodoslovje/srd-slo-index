@@ -56,6 +56,12 @@ def setup_full(db):
         CREATE INDEX idx_death_name_trgm ON deaths USING gist (name gist_trgm_ops);
         CREATE INDEX idx_death_surname_trgm ON deaths USING gist (surname gist_trgm_ops);
 
+        -- B-tree indexes on contributor — lets the planner quickly isolate one contributor's rows
+        -- before applying the expensive trgm join against the rest of the table.
+        CREATE INDEX idx_birth_contributor  ON births(contributor);
+        CREATE INDEX idx_family_contributor ON families(contributor);
+        CREATE INDEX idx_death_contributor  ON deaths(contributor);
+
         CREATE TABLE match_jobs (
             contributor TEXT PRIMARY KEY,
             status TEXT NOT NULL DEFAULT 'pending',
@@ -149,6 +155,9 @@ def setup_update(db):
         CREATE INDEX IF NOT EXISTS idx_family_children_list_trgm ON families USING gist (children_list gist_trgm_ops);
         CREATE INDEX IF NOT EXISTS idx_death_name_trgm ON deaths USING gist (name gist_trgm_ops);
         CREATE INDEX IF NOT EXISTS idx_death_surname_trgm ON deaths USING gist (surname gist_trgm_ops);
+        CREATE INDEX IF NOT EXISTS idx_birth_contributor  ON births(contributor);
+        CREATE INDEX IF NOT EXISTS idx_family_contributor ON families(contributor);
+        CREATE INDEX IF NOT EXISTS idx_death_contributor  ON deaths(contributor);
 
         CREATE TABLE IF NOT EXISTS match_jobs (
             contributor TEXT PRIMARY KEY,
