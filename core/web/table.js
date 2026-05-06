@@ -59,6 +59,7 @@ function exportToCSV(data, columns, filename) {
         val = parts.join(' | ');
       } else {
         val = row[col] != null ? row[col] : '';
+        if (col === 'total_links' && Number(val) === 0) val = '';
       }
       val = String(val).replace(/"/g, '""');
       return `"${val}"`;
@@ -186,6 +187,7 @@ function getValue(row, col) {
     if (Array.isArray(row.links)) return row.links.length;
     try { return JSON.parse(row.links).length; } catch { return 0; }
   }
+  if (col === 'matches') return Number(row.matches_count || 0);
   const isGedcomDate = col === 'date_of_birth' || col === 'date_of_marriage' || col === 'date_of_death';
   const isNumeric = ['total_births', 'total_families', 'total_deaths', 'total', 'total_links', 'confidence', 'matches'].includes(col);
   if (isGedcomDate) return parseDateForSort(row[col]);
@@ -481,7 +483,7 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         const count = row.matches_count || 0;
         const cell = count > 0
           ? `<a href="?t=contributors&matches=${encodeURIComponent(name)}" data-spa-nav>${count}</a>`
-          : '—';
+          : '';
         html += `<td class="col-center">${cell}</td>`;
       } else if (col === 'confidence') {
         const val = row[col] != null ? `${row[col]}%` : '—';
@@ -507,7 +509,8 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         }
       } else if (CENTERED_COLUMNS.has(col)) {
         const isNumeric = ['total_births', 'total_families', 'total_deaths', 'total', 'total_links', 'confidence', 'matches'].includes(col);
-        const val = isNumeric && row[col] != null ? Number(row[col]).toLocaleString() : (row[col] || '');
+        let val = isNumeric && row[col] != null ? Number(row[col]).toLocaleString() : (row[col] || '');
+        if (col === 'total_links' && Number(row[col] || 0) === 0) val = '';
         html += `<td class="col-center">${val}</td>`;
       } else if (RIGHT_COLUMNS.has(col)) {
         html += `<td class="col-right">${row[col] || ''}</td>`;
