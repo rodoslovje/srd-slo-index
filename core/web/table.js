@@ -175,12 +175,44 @@ const RIGHT_COLUMNS = new Set([
 
 function getValue(row, col) {
   if (col === 'parents') {
-    const getStr = (v) => typeof v === 'string' ? v : JSON.stringify(v || '');
-    return getStr(row.husband_parents) + getStr(row.wife_parents);
+    let count = 0;
+    if (row.husband_parents || row.wife_parents) {
+      const countP = (v) => {
+        if (!v) return 0;
+        try {
+          const arr = typeof v === 'string' ? JSON.parse(v) : v;
+          const f = arr[0] || {};
+          const m = arr[1] || {};
+          if (!f.name && !m.name) return 0;
+          let c = 0;
+          if (f.name || f.surname || f.year) c++;
+          if (m.name || m.surname || m.year) c++;
+          return c;
+        } catch(e) { return 0; }
+      };
+      count = countP(row.husband_parents) + countP(row.wife_parents);
+    } else {
+      if (row.father_name || row.father_surname) count++;
+      if (row.mother_name || row.mother_surname) count++;
+    }
+    return count;
   }
   if (col === 'partners') {
-    const getStr = (v) => typeof v === 'string' ? v : JSON.stringify(v || '');
-    return getStr(row.husbands_list) + getStr(row.wifes_list);
+    const countList = (v) => {
+      if (!v) return 0;
+      try {
+        const arr = typeof v === 'string' ? JSON.parse(v) : v;
+        return arr.length;
+      } catch(e) { return 0; }
+    };
+    return countList(row.husbands_list) + countList(row.wifes_list);
+  }
+  if (col === 'children') {
+    if (!row.children_list) return 0;
+    try {
+      const arr = typeof row.children_list === 'string' ? JSON.parse(row.children_list) : row.children_list;
+      return arr.length;
+    } catch(e) { return 0; }
   }
   if (col === 'links') {
     if (!row.links) return 0;
