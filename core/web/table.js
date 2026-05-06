@@ -18,7 +18,7 @@ function exportToCSV(data, columns, filename) {
         const parseP = (jsonStr, label) => {
           if (!jsonStr) return '';
           try {
-            const arr = JSON.parse(jsonStr);
+            const arr = typeof jsonStr === 'string' ? JSON.parse(jsonStr) : jsonStr;
             if (!arr.length) return '';
             const f = arr[0] || {}; const m = arr[1] || {};
             const fStr = `${f.name||''} ${f.surname||''} ${f.year ? '*'+f.year : ''}`.trim();
@@ -31,7 +31,7 @@ function exportToCSV(data, columns, filename) {
         val = [hp, wp].filter(Boolean).join(' | ');
       } else if (col === 'children' && row.children_list) {
         try {
-          const arr = JSON.parse(row.children_list);
+          const arr = typeof row.children_list === 'string' ? JSON.parse(row.children_list) : row.children_list;
           val = arr.map(c => {
              if (c.name === 'private' || c.name === 'unknown') return c.name;
              let d = c.name || '';
@@ -45,7 +45,7 @@ function exportToCSV(data, columns, filename) {
         const parseList = (jsonStr, label) => {
           if (!jsonStr) return;
           try {
-            const arr = JSON.parse(jsonStr);
+            const arr = typeof jsonStr === 'string' ? JSON.parse(jsonStr) : jsonStr;
             arr.forEach(p => {
               let d = p.name || '';
               if (p.surname) d += ' ' + p.surname;
@@ -173,10 +173,18 @@ const RIGHT_COLUMNS = new Set([
 ]);
 
 function getValue(row, col) {
-  if (col === 'parents') return String(row.husband_parents || '') + String(row.wife_parents || '');
-  if (col === 'partners') return String(row.husbands_list || '') + String(row.wifes_list || '');
+  if (col === 'parents') {
+    const getStr = (v) => typeof v === 'string' ? v : JSON.stringify(v || '');
+    return getStr(row.husband_parents) + getStr(row.wife_parents);
+  }
+  if (col === 'partners') {
+    const getStr = (v) => typeof v === 'string' ? v : JSON.stringify(v || '');
+    return getStr(row.husbands_list) + getStr(row.wifes_list);
+  }
   if (col === 'links') {
-    try { return row.links ? JSON.parse(row.links).length : 0; } catch { return 0; }
+    if (!row.links) return 0;
+    if (Array.isArray(row.links)) return row.links.length;
+    try { return JSON.parse(row.links).length; } catch { return 0; }
   }
   const isGedcomDate = col === 'date_of_birth' || col === 'date_of_marriage' || col === 'date_of_death';
   const isNumeric = ['total_births', 'total_families', 'total_deaths', 'total', 'total_links', 'confidence', 'matches'].includes(col);
@@ -246,7 +254,11 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
       if (col === 'links') {
         let linksList = [];
         if (row.links) {
-          try { linksList = JSON.parse(row.links); } catch(e) { linksList = [row.links]; }
+          if (Array.isArray(row.links)) {
+            linksList = row.links;
+          } else {
+            try { linksList = JSON.parse(row.links); } catch(e) { linksList = [row.links]; }
+          }
         }
         if (linksList.length) {
           const icons = linksList.map(url => {
@@ -345,7 +357,7 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         let count = 0;
 
         try {
-          const pList = JSON.parse(row.children_list);
+          const pList = typeof row.children_list === 'string' ? JSON.parse(row.children_list) : row.children_list;
           count = pList.length;
           formattedList = pList.map(c => {
             if (c.name === 'private' || c.name === 'unknown') return c.name;
@@ -412,7 +424,7 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         const renderParents = (parentsJson, labelKey) => {
           if (!parentsJson) return '';
           try {
-            const pList = JSON.parse(parentsJson);
+            const pList = typeof parentsJson === 'string' ? JSON.parse(parentsJson) : parentsJson;
             if (pList.length === 0) return '';
 
             const father = pList[0] || {};
@@ -477,7 +489,7 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         const processPartners = (jsonStr, isHusband) => {
           if (!jsonStr) return;
           try {
-            const pList = JSON.parse(jsonStr);
+            const pList = typeof jsonStr === 'string' ? JSON.parse(jsonStr) : jsonStr;
             pList.forEach(p => {
               count++;
               const famParams = new URLSearchParams();

@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Any
 from pydantic import BaseModel
 
 
@@ -11,6 +11,8 @@ class BirthBase(BaseModel):
     father_surname: Optional[str] = None
     mother_name: Optional[str] = None
     mother_surname: Optional[str] = None
+    husbands_list: Optional[Any] = None
+    wifes_list: Optional[Any] = None
     contributor: str
     links: Optional[str] = None
 
@@ -52,6 +54,8 @@ class DeathBase(BaseModel):
     father_surname: Optional[str] = None
     mother_name: Optional[str] = None
     mother_surname: Optional[str] = None
+    husbands_list: Optional[Any] = None
+    wifes_list: Optional[Any] = None
     contributor: str
     links: Optional[str] = None
 

@@ -15,6 +15,8 @@ class Birth(Base):
     father_surname = Column(Text)
     mother_name = Column(Text)
     mother_surname = Column(Text)
+    husbands_list = Column(Text, nullable=True)
+    wifes_list = Column(Text, nullable=True)
     contributor = Column(Text, index=True)
     links = Column(Text)
 
@@ -48,6 +50,8 @@ class Death(Base):
     father_surname = Column(Text)
     mother_name = Column(Text)
     mother_surname = Column(Text)
+    husbands_list = Column(Text, nullable=True)
+    wifes_list = Column(Text, nullable=True)
     contributor = Column(Text, index=True)
     links = Column(Text)
 
@@ -69,7 +73,9 @@ class MatchJob(Base):
 
     contributor = Column(Text, primary_key=True)
     status = Column(Text, default="pending")
-    queued_at = Column(DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc))
+    queued_at = Column(
+        DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc)
+    )
     completed_at = Column(DateTime, nullable=True)
 
 
@@ -84,4 +90,6 @@ class Match(Base):
     record_b_id = Column(Integer)
     confidence = Column(Float)
     match_fields = Column(Text)
-    computed_at = Column(DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc))
+    computed_at = Column(
+        DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc)
+    )
