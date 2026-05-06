@@ -294,7 +294,7 @@ def claim_next_job():
             WHERE contributor = (
                 SELECT contributor FROM match_jobs
                 WHERE status = 'pending'
-                ORDER BY queued_at
+                ORDER BY queued_at, contributor
                 FOR UPDATE SKIP LOCKED
                 LIMIT 1
             )
