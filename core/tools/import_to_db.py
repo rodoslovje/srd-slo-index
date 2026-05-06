@@ -72,6 +72,7 @@ def setup_full(db):
         CREATE TABLE match_jobs (
             contributor TEXT PRIMARY KEY,
             status TEXT NOT NULL DEFAULT 'pending',
+            pair_once BOOLEAN NOT NULL DEFAULT TRUE,
             queued_at TIMESTAMPTZ DEFAULT NOW(),
             completed_at TIMESTAMPTZ
         );
@@ -84,10 +85,12 @@ def setup_full(db):
             record_b_id INTEGER NOT NULL,
             confidence REAL NOT NULL,
             match_fields TEXT,
+            owner TEXT NOT NULL DEFAULT '',
             computed_at TIMESTAMPTZ DEFAULT NOW()
         );
-        CREATE INDEX idx_matches_a ON matches(contributor_a);
-        CREATE INDEX idx_matches_b ON matches(contributor_b);
+        CREATE INDEX idx_matches_a     ON matches(contributor_a);
+        CREATE INDEX idx_matches_b     ON matches(contributor_b);
+        CREATE INDEX idx_matches_owner ON matches(owner);
     """))
     db.commit()
 
@@ -196,8 +199,14 @@ def setup_update(db):
             match_fields TEXT,
             computed_at TIMESTAMPTZ DEFAULT NOW()
         );
-        CREATE INDEX IF NOT EXISTS idx_matches_a ON matches(contributor_a);
-        CREATE INDEX IF NOT EXISTS idx_matches_b ON matches(contributor_b);
+        CREATE INDEX IF NOT EXISTS idx_matches_a     ON matches(contributor_a);
+        CREATE INDEX IF NOT EXISTS idx_matches_b     ON matches(contributor_b);
+        CREATE INDEX IF NOT EXISTS idx_matches_owner ON matches(owner);
+
+        -- Pair-once optimisation: each job only processes pairs where the other
+        -- contributor sorts after it; both directions are stored in one INSERT.
+        ALTER TABLE matches    ADD COLUMN IF NOT EXISTS owner     TEXT    NOT NULL DEFAULT '';
+        ALTER TABLE match_jobs ADD COLUMN IF NOT EXISTS pair_once BOOLEAN NOT NULL DEFAULT TRUE;
     """))
     db.commit()
 

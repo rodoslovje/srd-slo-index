@@ -60,14 +60,29 @@ engine = create_engine(DATABASE_URL, pool_size=8, max_overflow=4)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # ---------------------------------------------------------------------------
-# Pure SQL INSERT...SELECT — all filtering and insertion done server-side.
-# Confidence is computed once in the 'scored' CTE and reused in WHERE + SELECT.
+# SQL factories — one helper per record type generates both pair_once and full
+# variants.  The only structural difference between modes:
+#
+#   pair_once=True  → b2.contributor > :contrib   (process each pair once)
+#                     DELETE WHERE owner = :contrib
+#                     INSERT stores BOTH A→B and B→A (UNION ALL), owner = :contrib
+#
+#   pair_once=False → b2.contributor != :contrib  (compare against every other)
+#                     DELETE WHERE contributor_a = :contrib OR contributor_b = :contrib
+#                     INSERT also stores both directions so the API can query either way
+#
+# Why both modes? --all uses pair_once for a 2x speedup: N*(N-1)/2 trigram JOINs
+# instead of N*(N-1).  --contributor uses full mode so a single reprocessed
+# contributor correctly replaces all its stale matches regardless of alphabetical
+# order.
 # ---------------------------------------------------------------------------
 
-_BIRTH_INSERT = text(r"""
+def _birth_insert(pair_once: bool) -> text:
+    cmp = ">" if pair_once else "!="
+    return text(f"""
     INSERT INTO matches
         (contributor_a, contributor_b, record_type, record_a_id, record_b_id,
-         confidence, match_fields)
+         confidence, match_fields, owner)
     WITH cands AS (
         SELECT
             b1.id AS a_id,
@@ -85,7 +100,7 @@ _BIRTH_INSERT = text(r"""
         FROM births b1
         JOIN births b2
             ON  b1.contributor  = :contrib
-            AND b2.contributor != :contrib
+            AND b2.contributor {cmp} :contrib
             AND (b1.birth_year IS NULL OR b2.birth_year IS NULL
                  OR ABS(b1.birth_year - b2.birth_year) <= :yr_tol)
             AND b1.surname % b2.surname
@@ -107,15 +122,27 @@ _BIRTH_INSERT = text(r"""
             'place',     CASE WHEN s_place IS NOT NULL
                               THEN round(s_place::numeric, 3) END,
             'year_diff', yr_diff
-        )::text
-    FROM scored
-    WHERE conf >= :conf_min
+        )::text, :contrib
+    FROM scored WHERE conf >= :conf_min
+    UNION ALL
+    SELECT b_contrib, :contrib, 'birth', b_id, a_id, conf,
+        jsonb_build_object(
+            'surname',   round(s_sur::numeric, 3),
+            'name',      round(s_name::numeric, 3),
+            'place',     CASE WHEN s_place IS NOT NULL
+                              THEN round(s_place::numeric, 3) END,
+            'year_diff', yr_diff
+        )::text, :contrib
+    FROM scored WHERE conf >= :conf_min
 """)
 
-_FAMILY_INSERT = text(r"""
+
+def _family_insert(pair_once: bool) -> text:
+    cmp = ">" if pair_once else "!="
+    return text(f"""
     INSERT INTO matches
         (contributor_a, contributor_b, record_type, record_a_id, record_b_id,
-         confidence, match_fields)
+         confidence, match_fields, owner)
     WITH cands AS (
         SELECT
             f1.id AS a_id,
@@ -141,7 +168,7 @@ _FAMILY_INSERT = text(r"""
         FROM families f1
         JOIN families f2
             ON  f1.contributor  = :contrib
-            AND f2.contributor != :contrib
+            AND f2.contributor {cmp} :contrib
             AND (f1.marriage_year IS NULL OR f2.marriage_year IS NULL
                  OR ABS(f1.marriage_year - f2.marriage_year) <= :yr_tol)
             AND f1.husband_surname % f2.husband_surname
@@ -169,15 +196,31 @@ _FAMILY_INSERT = text(r"""
             'place',           CASE WHEN s_place IS NOT NULL
                                     THEN round(s_place::numeric, 3) END,
             'year_diff',       yr_diff
-        )::text
-    FROM scored
-    WHERE conf >= :conf_min
+        )::text, :contrib
+    FROM scored WHERE conf >= :conf_min
+    UNION ALL
+    SELECT b_contrib, :contrib, 'family', b_id, a_id, conf,
+        jsonb_build_object(
+            'husband_surname', round(s_hsur::numeric, 3),
+            'wife_surname',    round(s_wsur::numeric, 3),
+            'husband_name',    CASE WHEN s_hname IS NOT NULL
+                                    THEN round(s_hname::numeric, 3) END,
+            'wife_name',       CASE WHEN s_wname IS NOT NULL
+                                    THEN round(s_wname::numeric, 3) END,
+            'place',           CASE WHEN s_place IS NOT NULL
+                                    THEN round(s_place::numeric, 3) END,
+            'year_diff',       yr_diff
+        )::text, :contrib
+    FROM scored WHERE conf >= :conf_min
 """)
 
-_DEATH_INSERT = text(r"""
+
+def _death_insert(pair_once: bool) -> text:
+    cmp = ">" if pair_once else "!="
+    return text(f"""
     INSERT INTO matches
         (contributor_a, contributor_b, record_type, record_a_id, record_b_id,
-         confidence, match_fields)
+         confidence, match_fields, owner)
     WITH cands AS (
         SELECT
             d1.id AS a_id,
@@ -195,7 +238,7 @@ _DEATH_INSERT = text(r"""
         FROM deaths d1
         JOIN deaths d2
             ON  d1.contributor  = :contrib
-            AND d2.contributor != :contrib
+            AND d2.contributor {cmp} :contrib
             AND (d1.death_year IS NULL OR d2.death_year IS NULL
                  OR ABS(d1.death_year - d2.death_year) <= :yr_tol)
             AND d1.surname % d2.surname
@@ -217,14 +260,32 @@ _DEATH_INSERT = text(r"""
             'place',     CASE WHEN s_place IS NOT NULL
                               THEN round(s_place::numeric, 3) END,
             'year_diff', yr_diff
-        )::text
-    FROM scored
-    WHERE conf >= :conf_min
+        )::text, :contrib
+    FROM scored WHERE conf >= :conf_min
+    UNION ALL
+    SELECT b_contrib, :contrib, 'death', b_id, a_id, conf,
+        jsonb_build_object(
+            'surname',   round(s_sur::numeric, 3),
+            'name',      round(s_name::numeric, 3),
+            'place',     CASE WHEN s_place IS NOT NULL
+                              THEN round(s_place::numeric, 3) END,
+            'year_diff', yr_diff
+        )::text, :contrib
+    FROM scored WHERE conf >= :conf_min
 """)
 
 
+# Pre-compile both variants at import time.
+_BIRTH_INSERT_PAIR_ONCE  = _birth_insert(pair_once=True)
+_BIRTH_INSERT_FULL       = _birth_insert(pair_once=False)
+_FAMILY_INSERT_PAIR_ONCE = _family_insert(pair_once=True)
+_FAMILY_INSERT_FULL      = _family_insert(pair_once=False)
+_DEATH_INSERT_PAIR_ONCE  = _death_insert(pair_once=True)
+_DEATH_INSERT_FULL       = _death_insert(pair_once=False)
+
+
 def claim_next_job():
-    """Atomically claim the next pending job. Returns contributor name or None."""
+    """Atomically claim the next pending job. Returns (contributor, pair_once) or (None, None)."""
     with engine.begin() as conn:
         row = conn.execute(text("""
             UPDATE match_jobs SET status = 'running'
@@ -235,9 +296,9 @@ def claim_next_job():
                 FOR UPDATE SKIP LOCKED
                 LIMIT 1
             )
-            RETURNING contributor
+            RETURNING contributor, pair_once
         """)).fetchone()
-        return row[0] if row else None
+        return (row[0], row[1]) if row else (None, None)
 
 
 def _session_settings(conn):
@@ -262,31 +323,48 @@ def _run_insert(sql, label, contributor, params):
     return n
 
 
-def process_job(contributor):
+def process_job(contributor, pair_once: bool):
     params = {
         "contrib":   contributor,
         "yr_tol":    YEAR_TOLERANCE,
         "conf_min":  CONFIDENCE_MIN,
     }
 
-    # Clear stale matches (no trgm settings needed here)
+    # Scope of deletion depends on mode:
+    # - pair_once: only delete rows this job previously owned; earlier contributors'
+    #   rows for pairs they "own" are left untouched.
+    # - full: delete every match involving this contributor regardless of who stored it,
+    #   then recompute fresh against all others (used for individual reprocessing).
     with engine.begin() as conn:
-        deleted = conn.execute(
-            text("DELETE FROM matches WHERE contributor_a = :contrib"), params
-        ).rowcount
+        if pair_once:
+            delete_sql = text("DELETE FROM matches WHERE owner = :contrib")
+        else:
+            delete_sql = text(
+                "DELETE FROM matches WHERE contributor_a = :contrib OR contributor_b = :contrib"
+            )
+        deleted = conn.execute(delete_sql, params).rowcount
     if deleted:
         log.info(f"  [{contributor}] removed {deleted} stale matches")
+
+    if pair_once:
+        inserts = (
+            (_BIRTH_INSERT_PAIR_ONCE,  "birth"),
+            (_FAMILY_INSERT_PAIR_ONCE, "family"),
+            (_DEATH_INSERT_PAIR_ONCE,  "death"),
+        )
+    else:
+        inserts = (
+            (_BIRTH_INSERT_FULL,  "birth"),
+            (_FAMILY_INSERT_FULL, "family"),
+            (_DEATH_INSERT_FULL,  "death"),
+        )
 
     # Run birth / family / death inserts in parallel — they hit different tables.
     total = 0
     with ThreadPoolExecutor(max_workers=3) as pool:
         futures = {
             pool.submit(_run_insert, sql, label, contributor, params): label
-            for sql, label in (
-                (_BIRTH_INSERT,  "birth"),
-                (_FAMILY_INSERT, "family"),
-                (_DEATH_INSERT,  "death"),
-            )
+            for sql, label in inserts
         }
         for f in as_completed(futures):
             total += f.result()
@@ -303,13 +381,14 @@ def process_job(contributor):
 def worker(_):
     """Claim and process jobs until none remain."""
     while True:
-        contributor = claim_next_job()
+        contributor, pair_once = claim_next_job()
         if contributor is None:
             return
         t0 = time.monotonic()
-        log.info(f"Computing matches for: {contributor}")
+        mode = "pair_once" if pair_once else "full"
+        log.info(f"Computing matches for: {contributor} [{mode}]")
         try:
-            process_job(contributor)
+            process_job(contributor, pair_once)
             log.info(f"Finished {contributor} in {time.monotonic()-t0:.0f}s")
         except Exception as exc:
             log.error(f"Error processing {contributor} after {time.monotonic()-t0:.0f}s: {exc}")

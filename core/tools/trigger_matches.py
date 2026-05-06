@@ -44,16 +44,16 @@ engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
-def queue_contributors(db, contributors):
+def queue_contributors(db, contributors, pair_once: bool = True):
     for c in contributors:
         db.execute(
             text("""
-                INSERT INTO match_jobs (contributor, status, queued_at)
-                VALUES (:c, 'pending', NOW())
+                INSERT INTO match_jobs (contributor, status, pair_once, queued_at)
+                VALUES (:c, 'pending', :pair_once, NOW())
                 ON CONFLICT (contributor) DO UPDATE
-                    SET status = 'pending', queued_at = NOW()
+                    SET status = 'pending', pair_once = :pair_once, queued_at = NOW()
             """),
-            {"c": c},
+            {"c": c, "pair_once": pair_once},
         )
     db.commit()
 
@@ -136,9 +136,19 @@ def main():
             if not targets:
                 print("No contributors found in database.")
                 return
-            print(f"Queuing {len(targets)} contributor(s)...")
+            # Clear all existing matches before a full pair_once recomputation so
+            # there are no leftover rows from previous full-mode individual runs that
+            # would conflict with the new ownership assignments.
+            n = db.execute(text("DELETE FROM matches")).rowcount
+            db.commit()
+            if n:
+                print(f"Cleared {n} existing match record(s) for clean recomputation.")
+            print(f"Queuing {len(targets)} contributor(s) [pair_once mode]...")
+            queue_contributors(db, targets, pair_once=True)
         else:
-            # Validate that requested contributors exist
+            # Individual contributor reprocessing: compare against ALL other
+            # contributors and take ownership of every match involving this
+            # contributor.  This ensures correctness even when data has changed.
             targets = []
             for name in args.contributors:
                 row = db.execute(
@@ -151,8 +161,9 @@ def main():
             if not targets:
                 print("No valid contributors to queue.")
                 return
+            print(f"Queuing {len(targets)} contributor(s) [full mode]...")
+            queue_contributors(db, targets, pair_once=False)
 
-        queue_contributors(db, targets)
         print(f"Queued: {', '.join(targets)}")
     finally:
         db.close()
