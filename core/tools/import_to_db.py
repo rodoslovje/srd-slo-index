@@ -26,9 +26,7 @@ def setup_full(db):
     """Drop and recreate all tables (full mode)."""
     print("Setting up database tables and extensions (full rebuild)...")
     db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
-    db.execute(
-        text(
-            """
+    db.execute(text("""
         DROP TABLE IF EXISTS births, families, deaths, contributors, match_jobs, matches CASCADE;
 
         CREATE TABLE contributors (
@@ -41,13 +39,13 @@ def setup_full(db):
             links_count INTEGER DEFAULT 0
         );
         CREATE TABLE births (
-            id SERIAL PRIMARY KEY, name TEXT, surname TEXT, date_of_birth TEXT, place_of_birth TEXT, father_name TEXT, father_surname TEXT, mother_name TEXT, mother_surname TEXT, contributor TEXT, links TEXT
+            id SERIAL PRIMARY KEY, name TEXT, surname TEXT, date_of_birth TEXT, place_of_birth TEXT, father_name TEXT, father_surname TEXT, mother_name TEXT, mother_surname TEXT, husbands_list TEXT, wifes_list TEXT, contributor TEXT, links TEXT
         );
         CREATE TABLE families (
             id SERIAL PRIMARY KEY, husband_name TEXT, husband_surname TEXT, wife_name TEXT, wife_surname TEXT, children_list TEXT, husband_parents TEXT, wife_parents TEXT, date_of_marriage TEXT, place_of_marriage TEXT, contributor TEXT, links TEXT
         );
         CREATE TABLE deaths (
-            id SERIAL PRIMARY KEY, name TEXT, surname TEXT, date_of_death TEXT, place_of_death TEXT, father_name TEXT, father_surname TEXT, mother_name TEXT, mother_surname TEXT, contributor TEXT, links TEXT
+            id SERIAL PRIMARY KEY, name TEXT, surname TEXT, date_of_death TEXT, place_of_death TEXT, father_name TEXT, father_surname TEXT, mother_name TEXT, mother_surname TEXT, husbands_list TEXT, wifes_list TEXT, contributor TEXT, links TEXT
         );
 
         CREATE INDEX idx_birth_name_trgm ON births USING gist (name gist_trgm_ops);
@@ -77,9 +75,7 @@ def setup_full(db):
         );
         CREATE INDEX idx_matches_a ON matches(contributor_a);
         CREATE INDEX idx_matches_b ON matches(contributor_b);
-    """
-        )
-    )
+    """))
     db.commit()
 
 
@@ -87,9 +83,7 @@ def setup_update(db):
     """Create tables if they don't exist yet (update mode)."""
     print("Setting up database tables and extensions (update mode)...")
     db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
-    db.execute(
-        text(
-            """
+    db.execute(text("""
         CREATE TABLE IF NOT EXISTS contributors (
             id SERIAL PRIMARY KEY,
             name VARCHAR(255) UNIQUE NOT NULL,
@@ -132,6 +126,10 @@ def setup_update(db):
         ALTER TABLE deaths ADD COLUMN IF NOT EXISTS father_surname TEXT;
         ALTER TABLE deaths ADD COLUMN IF NOT EXISTS mother_name TEXT;
         ALTER TABLE deaths ADD COLUMN IF NOT EXISTS mother_surname TEXT;
+        ALTER TABLE births ADD COLUMN IF NOT EXISTS husbands_list TEXT;
+        ALTER TABLE births ADD COLUMN IF NOT EXISTS wifes_list TEXT;
+        ALTER TABLE deaths ADD COLUMN IF NOT EXISTS husbands_list TEXT;
+        ALTER TABLE deaths ADD COLUMN IF NOT EXISTS wifes_list TEXT;
 
         ALTER TABLE families DROP COLUMN IF EXISTS children_json;
         ALTER TABLE families DROP COLUMN IF EXISTS children;
@@ -171,9 +169,7 @@ def setup_update(db):
         );
         CREATE INDEX IF NOT EXISTS idx_matches_a ON matches(contributor_a);
         CREATE INDEX IF NOT EXISTS idx_matches_b ON matches(contributor_b);
-    """
-        )
-    )
+    """))
     db.commit()
 
 
@@ -270,12 +266,22 @@ def import_contributor(
                 birth.setdefault("father_surname", None)
                 birth.setdefault("mother_name", None)
                 birth.setdefault("mother_surname", None)
+                birth.setdefault("husbands_list", None)
+                birth.setdefault("wifes_list", None)
+                if isinstance(birth.get("husbands_list"), list):
+                    birth["husbands_list"] = json.dumps(
+                        birth["husbands_list"], ensure_ascii=False
+                    )
+                if isinstance(birth.get("wifes_list"), list):
+                    birth["wifes_list"] = json.dumps(
+                        birth["wifes_list"], ensure_ascii=False
+                    )
                 db.execute(
                     text(
                         "INSERT INTO births (name, surname, date_of_birth, place_of_birth, "
-                        "father_name, father_surname, mother_name, mother_surname, contributor, links) "
+                        "father_name, father_surname, mother_name, mother_surname, husbands_list, wifes_list, contributor, links) "
                         "VALUES (:name, :surname, :date_of_birth, :place_of_birth, "
-                        ":father_name, :father_surname, :mother_name, :mother_surname, :contributor, :links)"
+                        ":father_name, :father_surname, :mother_name, :mother_surname, :husbands_list, :wifes_list, :contributor, :links)"
                     ),
                     birth,
                 )
@@ -359,12 +365,22 @@ def import_contributor(
                 death.setdefault("father_surname", None)
                 death.setdefault("mother_name", None)
                 death.setdefault("mother_surname", None)
+                death.setdefault("husbands_list", None)
+                death.setdefault("wifes_list", None)
+                if isinstance(death.get("husbands_list"), list):
+                    death["husbands_list"] = json.dumps(
+                        death["husbands_list"], ensure_ascii=False
+                    )
+                if isinstance(death.get("wifes_list"), list):
+                    death["wifes_list"] = json.dumps(
+                        death["wifes_list"], ensure_ascii=False
+                    )
                 db.execute(
                     text(
                         "INSERT INTO deaths (name, surname, date_of_death, place_of_death, "
-                        "father_name, father_surname, mother_name, mother_surname, contributor, links) "
+                        "father_name, father_surname, mother_name, mother_surname, husbands_list, wifes_list, contributor, links) "
                         "VALUES (:name, :surname, :date_of_death, :place_of_death, "
-                        ":father_name, :father_surname, :mother_name, :mother_surname, :contributor, :links)"
+                        ":father_name, :father_surname, :mother_name, :mother_surname, :husbands_list, :wifes_list, :contributor, :links)"
                     ),
                     death,
                 )
@@ -589,9 +605,13 @@ def main():
                 {"c": c},
             )
         db.commit()
-        print(f"Queued match computation for {len(updated_contributors)} contributor(s).")
+        print(
+            f"Queued match computation for {len(updated_contributors)} contributor(s)."
+        )
 
-        script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "compute_matches.py")
+        script = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "compute_matches.py"
+        )
         log_path = os.path.join(DATA_DIR, "compute_matches.log")
         try:
             subprocess.Popen(

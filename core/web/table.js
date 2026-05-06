@@ -40,6 +40,23 @@ function exportToCSV(data, columns, filename) {
              return d;
           }).join(', ');
         } catch(e) { val = row[col] || ''; }
+      } else if (col === 'partners' && (row.husbands_list || row.wifes_list)) {
+        const parts = [];
+        const parseList = (jsonStr, label) => {
+          if (!jsonStr) return;
+          try {
+            const arr = JSON.parse(jsonStr);
+            arr.forEach(p => {
+              let d = p.name || '';
+              if (p.surname) d += ' ' + p.surname;
+              if (p.year) d += ' *' + p.year;
+              parts.push(`${label}: ${d.trim()}`);
+            });
+          } catch(e) {}
+        };
+        parseList(row.husbands_list, t('label_husband'));
+        parseList(row.wifes_list, t('label_wife'));
+        val = parts.join(' | ');
       } else {
         val = row[col] != null ? row[col] : '';
       }
@@ -157,6 +174,7 @@ const RIGHT_COLUMNS = new Set([
 
 function getValue(row, col) {
   if (col === 'parents') return String(row.husband_parents || '') + String(row.wife_parents || '');
+  if (col === 'partners') return String(row.husbands_list || '') + String(row.wifes_list || '');
   if (col === 'links') {
     try { return row.links ? JSON.parse(row.links).length : 0; } catch { return 0; }
   }
@@ -448,6 +466,50 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
           <details class="expandable-cell">
             <summary>${parentsCount}</summary>
             <div class="expanded-content">${combined}</div>
+          </details>
+        </td>`;
+        } else {
+          html += `<td></td>`;
+        }
+      } else if (col === 'partners' && (row.husbands_list || row.wifes_list)) {
+        let formattedList = [];
+        let count = 0;
+        const processPartners = (jsonStr, isHusband) => {
+          if (!jsonStr) return;
+          try {
+            const pList = JSON.parse(jsonStr);
+            pList.forEach(p => {
+              count++;
+              const famParams = new URLSearchParams();
+              famParams.set('t', 'family');
+              if (isHusband) {
+                if (p.name && p.name !== 'unknown' && p.name !== 'private') famParams.set('hn', p.name);
+                if (p.surname) famParams.set('hsn', p.surname);
+                if (row.name && row.name !== 'unknown' && row.name !== 'private') famParams.set('wn', row.name);
+                if (row.surname) famParams.set('wsn', row.surname);
+              } else {
+                if (row.name && row.name !== 'unknown' && row.name !== 'private') famParams.set('hn', row.name);
+                if (row.surname) famParams.set('hsn', row.surname);
+                if (p.name && p.name !== 'unknown' && p.name !== 'private') famParams.set('wn', p.name);
+                if (p.surname) famParams.set('wsn', p.surname);
+              }
+              famParams.set('ex', '1');
+              let partnerDisplay = p.name || '';
+              if (p.surname) partnerDisplay += ` ${p.surname}`;
+              if (p.year) partnerDisplay += ` *${p.year}`;
+              if (p.name === 'private' || p.name === 'unknown') partnerDisplay = p.name;
+              const label = isHusband ? t('label_husband') : t('label_wife');
+              formattedList.push(`<a href="?${famParams.toString()}" data-spa-nav title="${label}">💍 ${partnerDisplay}</a>`);
+            });
+          } catch (e) { console.error("Failed to parse JSON for partners", e); }
+        };
+        processPartners(row.husbands_list, true);
+        processPartners(row.wifes_list, false);
+        if (count > 0) {
+          html += `<td>
+          <details class="expandable-cell">
+            <summary>${count}</summary>
+            <div class="expanded-content">${formattedList.join('<br>')}</div>
           </details>
         </td>`;
         } else {
