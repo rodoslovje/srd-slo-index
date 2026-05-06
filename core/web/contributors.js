@@ -1,5 +1,5 @@
 import { t } from './i18n.js';
-import { renderTable } from './table.js';
+import { renderTable, formatSpecialCell } from './table.js';
 import { API_BASE_URL } from './config.js';
 
 const contributorColumns = ['contributor_ID', 'total_births', 'total_families', 'total_deaths', 'total', 'total_links', 'last_modified', 'matches'];
@@ -461,6 +461,8 @@ async function renderMatchDetail(contributor, partner) {
       fields: [
         { f: 'name',    h: t('col_name') },
         { f: 'surname', h: t('col_surname') },
+        { f: 'parents', h: t('col_parents') },
+        { f: 'partners',h: t('col_partners') },
         { f: 'date',    h: t('col_date_of_birth') },
         { f: 'place',   h: t('col_place_of_birth') },
       ],
@@ -474,6 +476,8 @@ async function renderMatchDetail(contributor, partner) {
         { f: 'husband_surname', h: t('col_husband_surname') },
         { f: 'wife_name',       h: t('col_wife_name') },
         { f: 'wife_surname',    h: t('col_wife_surname') },
+        { f: 'parents',         h: t('col_parents') },
+        { f: 'children',        h: t('col_children') },
         { f: 'date',            h: t('col_date_of_marriage') },
         { f: 'place',           h: t('col_place_of_marriage') },
       ],
@@ -491,6 +495,8 @@ async function renderMatchDetail(contributor, partner) {
       fields: [
         { f: 'name',    h: t('col_name') },
         { f: 'surname', h: t('col_surname') },
+        { f: 'parents', h: t('col_parents') },
+        { f: 'partners',h: t('col_partners') },
         { f: 'date',    h: t('col_date_of_death') },
         { f: 'place',   h: t('col_place_of_death') },
       ],
@@ -507,6 +513,10 @@ async function renderMatchDetail(contributor, partner) {
     if (!group.length) continue;
 
     const makeCell = (rec, f) => {
+      if (f === 'parents' || f === 'children' || f === 'partners') {
+        const inner = formatSpecialCell(f, rec);
+        return `<td>${inner || ''}</td>`;
+      }
       const val = rec[f] || '';
       const cls = f === 'date' ? ' class="col-right"' : '';
       if (val && linkedFields.has(f)) {

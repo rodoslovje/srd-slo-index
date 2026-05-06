@@ -214,6 +214,186 @@ function sortData(data, primary, secondary) {
   });
 }
 
+export function formatSpecialCell(col, row) {
+  if (col === 'children' && row.children_list) {
+    let formattedList = [];
+    let count = 0;
+
+    try {
+      const pList = typeof row.children_list === 'string' ? JSON.parse(row.children_list) : row.children_list;
+      count = pList.length;
+      formattedList = pList.map(c => {
+        if (c.name === 'private' || c.name === 'unknown') return c.name;
+
+        const params = new URLSearchParams();
+        params.set('t', 'birth');
+        if (c.name) params.set('n', c.name);
+        if (c.surname) params.set('sn', c.surname);
+        if (c.year) params.set('dob', c.year);
+        params.set('ex', '1');
+
+        let childDisplay = c.name || '';
+        if (c.surname && c.surname !== row.husband_surname) childDisplay += ` ${c.surname}`;
+        if (c.year) childDisplay += ` *${c.year}`;
+
+        return `<a href="?${params.toString()}" data-spa-nav>${childDisplay}</a>`;
+      });
+    } catch (e) {
+      console.error("Failed to parse JSON for children", e);
+    }
+
+    if (count === 0) return '';
+    return `<details class="expandable-cell">
+            <summary>${count}</summary>
+            <div class="expanded-content">${formattedList.join('<br>')}</div>
+          </details>`;
+  }
+
+  if (col === 'parents' && (row.father_name || row.father_surname || row.mother_name || row.mother_surname)) {
+    const hasFather = row.father_name || row.father_surname;
+    const hasMother = row.mother_name || row.mother_surname;
+    const count = (hasFather ? 1 : 0) + (hasMother ? 1 : 0);
+
+    const famParams = new URLSearchParams();
+    famParams.set('t', 'family');
+    if (row.father_name) famParams.set('hn', row.father_name);
+    if (row.father_surname) famParams.set('hsn', row.father_surname);
+    if (row.mother_name) famParams.set('wn', row.mother_name);
+    if (row.mother_surname) famParams.set('wsn', row.mother_surname);
+    famParams.set('ex', '1');
+
+    const makeBirthLink = (name, surname) => {
+      const display = [name, surname].filter(Boolean).join(' ');
+      if (name === 'private' || name === 'unknown') return display;
+      const p = new URLSearchParams();
+      p.set('t', 'birth');
+      if (name) p.set('n', name);
+      if (surname) p.set('sn', surname);
+      p.set('ex', '1');
+      return `<a href="?${p.toString()}" class="name-link" data-spa-nav>${display}</a>`;
+    };
+
+    let content = `<a href="?${famParams.toString()}" class="name-link" data-spa-nav style="font-weight:600;">${t('col_parents')}: 👪</a>`;
+    if (hasFather) content += `<br>${makeBirthLink(row.father_name, row.father_surname)}`;
+    if (hasMother) content += `<br>${makeBirthLink(row.mother_name, row.mother_surname)}`;
+
+    return `<details class="expandable-cell">
+            <summary>${count}</summary>
+            <div class="expanded-content">${content}</div>
+          </details>`;
+  }
+
+  if (col === 'parents' && (row.husband_parents || row.wife_parents)) {
+    let parentsCount = 0;
+    const renderParents = (parentsJson, labelKey) => {
+      if (!parentsJson) return '';
+      try {
+        const pList = typeof parentsJson === 'string' ? JSON.parse(parentsJson) : parentsJson;
+        if (pList.length === 0) return '';
+
+        const father = pList[0] || {};
+        const mother = pList[1] || {};
+        if (!father.name && !mother.name) return '';
+
+        const fName = father.name === 'private' || father.name === 'unknown' ? father.name : father.name || '';
+        const fSur = father.name === 'private' || father.name === 'unknown' ? '' : father.surname || '';
+        const fYear = father.year ? ` *${father.year}` : '';
+
+        const mName = mother.name === 'private' || mother.name === 'unknown' ? mother.name : mother.name || '';
+        const mSur = mother.name === 'private' || mother.name === 'unknown' ? '' : mother.surname || '';
+        const mYear = mother.year ? ` *${mother.year}` : '';
+
+        const famParams = new URLSearchParams();
+        famParams.set('t', 'family');
+        if (fName && fName !== 'unknown' && fName !== 'private') famParams.set('hn', fName);
+        if (fSur) famParams.set('hsn', fSur);
+        if (mName && mName !== 'unknown' && mName !== 'private') famParams.set('wn', mName);
+        if (mSur) famParams.set('wsn', mSur);
+        famParams.set('ex', '1');
+
+        const getBirthLink = (n, s, display) => {
+          if (n === 'private' || n === 'unknown') return display;
+          if (!n && !s) return display;
+          const bParams = new URLSearchParams();
+          bParams.set('t', 'birth');
+          if (n) bParams.set('n', n);
+          if (s) bParams.set('sn', s);
+          bParams.set('ex', '1');
+          return `<a href="?${bParams.toString()}" class="name-link" data-spa-nav>${display}</a>`;
+        };
+
+        const fDisplay = [fName, fSur].filter(Boolean).join(' ') + fYear;
+        const mDisplay = [mName, mSur].filter(Boolean).join(' ') + mYear;
+
+        if (fDisplay) parentsCount++;
+        if (mDisplay) parentsCount++;
+
+        let htmlStr = `<div class="parent-group" style="margin-bottom: 8px;">
+          <a href="?${famParams.toString()}" class="name-link" data-spa-nav style="font-weight: 600;">${t(labelKey)}: 👪</a><br>`;
+        if (fDisplay) htmlStr += `${getBirthLink(fName, fSur, fDisplay)}<br>`;
+        if (mDisplay) htmlStr += `${getBirthLink(mName, mSur, mDisplay)}`;
+        htmlStr += `</div>`;
+        return htmlStr;
+      } catch(e) { return ''; }
+    };
+    const combined = [renderParents(row.husband_parents, 'label_husband'), renderParents(row.wife_parents, 'label_wife')].filter(Boolean).join('');
+    if (parentsCount > 0) {
+      return `<details class="expandable-cell">
+            <summary>${parentsCount}</summary>
+            <div class="expanded-content">${combined}</div>
+          </details>`;
+    } else {
+      return '';
+    }
+  }
+
+  if (col === 'partners' && (row.husbands_list || row.wifes_list)) {
+    let formattedList = [];
+    let count = 0;
+    const processPartners = (jsonStr, isHusband) => {
+      if (!jsonStr) return;
+      try {
+        const pList = typeof jsonStr === 'string' ? JSON.parse(jsonStr) : jsonStr;
+        pList.forEach(p => {
+          count++;
+          const famParams = new URLSearchParams();
+          famParams.set('t', 'family');
+          if (isHusband) {
+            if (p.name && p.name !== 'unknown' && p.name !== 'private') famParams.set('hn', p.name);
+            if (p.surname) famParams.set('hsn', p.surname);
+            if (row.name && row.name !== 'unknown' && row.name !== 'private') famParams.set('wn', row.name);
+            if (row.surname) famParams.set('wsn', row.surname);
+          } else {
+            if (row.name && row.name !== 'unknown' && row.name !== 'private') famParams.set('hn', row.name);
+            if (row.surname) famParams.set('hsn', row.surname);
+            if (p.name && p.name !== 'unknown' && p.name !== 'private') famParams.set('wn', p.name);
+            if (p.surname) famParams.set('wsn', p.surname);
+          }
+          famParams.set('ex', '1');
+          let partnerDisplay = p.name || '';
+          if (p.surname) partnerDisplay += ` ${p.surname}`;
+          if (p.year) partnerDisplay += ` *${p.year}`;
+          if (p.name === 'private' || p.name === 'unknown') partnerDisplay = p.name;
+          const label = isHusband ? t('label_husband') : t('label_wife');
+          formattedList.push(`<a href="?${famParams.toString()}" data-spa-nav title="${label}">${partnerDisplay}</a>`);
+        });
+      } catch (e) { console.error("Failed to parse JSON for partners", e); }
+    };
+    processPartners(row.husbands_list, true);
+    processPartners(row.wifes_list, false);
+    if (count > 0) {
+      return `<details class="expandable-cell">
+            <summary>${count}</summary>
+            <div class="expanded-content">${formattedList.join('<br>')}</div>
+          </details>`;
+    } else {
+      return '';
+    }
+  }
+
+  return null;
+}
+
 export function renderTable(data, containerId, columns, defaultSortColumn = null, defaultSortAscending = true, defaultSecondarySortColumn = null, contributorUrlMap = {}) {
   const container = document.getElementById(containerId);
   const headerEl = container.previousElementSibling;
@@ -352,181 +532,9 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         if (row.surname) params.set('sn', row.surname);
         params.set('ex', '1');
         html += `<td><a href="?${params.toString()}" class="name-link" data-spa-nav>${row[col]}</a></td>`;
-      } else if (col === 'children' && row.children_list) {
-        let formattedList = [];
-        let count = 0;
-
-        try {
-          const pList = typeof row.children_list === 'string' ? JSON.parse(row.children_list) : row.children_list;
-          count = pList.length;
-          formattedList = pList.map(c => {
-            if (c.name === 'private' || c.name === 'unknown') return c.name;
-
-            const params = new URLSearchParams();
-            params.set('t', 'birth');
-            if (c.name) params.set('n', c.name);
-            if (c.surname) params.set('sn', c.surname);
-            if (c.year) params.set('dob', c.year);
-            params.set('ex', '1');
-
-            let childDisplay = c.name || '';
-            if (c.surname && c.surname !== row.husband_surname) childDisplay += ` ${c.surname}`;
-            if (c.year) childDisplay += ` *${c.year}`;
-
-            return `<a href="?${params.toString()}" data-spa-nav>${childDisplay}</a>`;
-          });
-        } catch (e) {
-          console.error("Failed to parse JSON for children", e);
-        }
-
-        html += `<td>
-          <details class="expandable-cell">
-            <summary>${count}</summary>
-            <div class="expanded-content">${formattedList.join('<br>')}</div>
-          </details>
-        </td>`;
-      } else if (col === 'parents' && (row.father_name || row.father_surname || row.mother_name || row.mother_surname)) {
-        const hasFather = row.father_name || row.father_surname;
-        const hasMother = row.mother_name || row.mother_surname;
-        const count = (hasFather ? 1 : 0) + (hasMother ? 1 : 0);
-
-        const famParams = new URLSearchParams();
-        famParams.set('t', 'family');
-        if (row.father_name) famParams.set('hn', row.father_name);
-        if (row.father_surname) famParams.set('hsn', row.father_surname);
-        if (row.mother_name) famParams.set('wn', row.mother_name);
-        if (row.mother_surname) famParams.set('wsn', row.mother_surname);
-        famParams.set('ex', '1');
-
-        const makeBirthLink = (name, surname) => {
-          const display = [name, surname].filter(Boolean).join(' ');
-          if (name === 'private' || name === 'unknown') return display;
-          const p = new URLSearchParams();
-          p.set('t', 'birth');
-          if (name) p.set('n', name);
-          if (surname) p.set('sn', surname);
-          p.set('ex', '1');
-          return `<a href="?${p.toString()}" class="name-link" data-spa-nav>${display}</a>`;
-        };
-
-        let content = `<a href="?${famParams.toString()}" class="name-link" data-spa-nav style="font-weight:600;">${t('col_parents')}: 👪</a>`;
-        if (hasFather) content += `<br>${makeBirthLink(row.father_name, row.father_surname)}`;
-        if (hasMother) content += `<br>${makeBirthLink(row.mother_name, row.mother_surname)}`;
-
-        html += `<td>
-          <details class="expandable-cell">
-            <summary>${count}</summary>
-            <div class="expanded-content">${content}</div>
-          </details>
-        </td>`;
-      } else if (col === 'parents' && (row.husband_parents || row.wife_parents)) {
-        let parentsCount = 0;
-        const renderParents = (parentsJson, labelKey) => {
-          if (!parentsJson) return '';
-          try {
-            const pList = typeof parentsJson === 'string' ? JSON.parse(parentsJson) : parentsJson;
-            if (pList.length === 0) return '';
-
-            const father = pList[0] || {};
-            const mother = pList[1] || {};
-            if (!father.name && !mother.name) return '';
-
-            const fName = father.name === 'private' || father.name === 'unknown' ? father.name : father.name || '';
-            const fSur = father.name === 'private' || father.name === 'unknown' ? '' : father.surname || '';
-            const fYear = father.year ? ` *${father.year}` : '';
-
-            const mName = mother.name === 'private' || mother.name === 'unknown' ? mother.name : mother.name || '';
-            const mSur = mother.name === 'private' || mother.name === 'unknown' ? '' : mother.surname || '';
-            const mYear = mother.year ? ` *${mother.year}` : '';
-
-            const famParams = new URLSearchParams();
-            famParams.set('t', 'family');
-            if (fName && fName !== 'unknown' && fName !== 'private') famParams.set('hn', fName);
-            if (fSur) famParams.set('hsn', fSur);
-            if (mName && mName !== 'unknown' && mName !== 'private') famParams.set('wn', mName);
-            if (mSur) famParams.set('wsn', mSur);
-            famParams.set('ex', '1');
-
-            const getBirthLink = (n, s, display) => {
-              if (n === 'private' || n === 'unknown') return display;
-              if (!n && !s) return display;
-              const bParams = new URLSearchParams();
-              bParams.set('t', 'birth');
-              if (n) bParams.set('n', n);
-              if (s) bParams.set('sn', s);
-              bParams.set('ex', '1');
-              return `<a href="?${bParams.toString()}" class="name-link" data-spa-nav>${display}</a>`;
-            };
-
-            const fDisplay = [fName, fSur].filter(Boolean).join(' ') + fYear;
-            const mDisplay = [mName, mSur].filter(Boolean).join(' ') + mYear;
-
-            if (fDisplay) parentsCount++;
-            if (mDisplay) parentsCount++;
-
-            let htmlStr = `<div class="parent-group" style="margin-bottom: 8px;">
-              <a href="?${famParams.toString()}" class="name-link" data-spa-nav style="font-weight: 600;">${t(labelKey)}: 👪</a><br>`;
-            if (fDisplay) htmlStr += `${getBirthLink(fName, fSur, fDisplay)}<br>`;
-            if (mDisplay) htmlStr += `${getBirthLink(mName, mSur, mDisplay)}`;
-            htmlStr += `</div>`;
-            return htmlStr;
-          } catch(e) { return ''; }
-        };
-        const combined = [renderParents(row.husband_parents, 'label_husband'), renderParents(row.wife_parents, 'label_wife')].filter(Boolean).join('');
-        if (parentsCount > 0) {
-          html += `<td>
-          <details class="expandable-cell">
-            <summary>${parentsCount}</summary>
-            <div class="expanded-content">${combined}</div>
-          </details>
-        </td>`;
-        } else {
-          html += `<td></td>`;
-        }
-      } else if (col === 'partners' && (row.husbands_list || row.wifes_list)) {
-        let formattedList = [];
-        let count = 0;
-        const processPartners = (jsonStr, isHusband) => {
-          if (!jsonStr) return;
-          try {
-            const pList = typeof jsonStr === 'string' ? JSON.parse(jsonStr) : jsonStr;
-            pList.forEach(p => {
-              count++;
-              const famParams = new URLSearchParams();
-              famParams.set('t', 'family');
-              if (isHusband) {
-                if (p.name && p.name !== 'unknown' && p.name !== 'private') famParams.set('hn', p.name);
-                if (p.surname) famParams.set('hsn', p.surname);
-                if (row.name && row.name !== 'unknown' && row.name !== 'private') famParams.set('wn', row.name);
-                if (row.surname) famParams.set('wsn', row.surname);
-              } else {
-                if (row.name && row.name !== 'unknown' && row.name !== 'private') famParams.set('hn', row.name);
-                if (row.surname) famParams.set('hsn', row.surname);
-                if (p.name && p.name !== 'unknown' && p.name !== 'private') famParams.set('wn', p.name);
-                if (p.surname) famParams.set('wsn', p.surname);
-              }
-              famParams.set('ex', '1');
-              let partnerDisplay = p.name || '';
-              if (p.surname) partnerDisplay += ` ${p.surname}`;
-              if (p.year) partnerDisplay += ` *${p.year}`;
-              if (p.name === 'private' || p.name === 'unknown') partnerDisplay = p.name;
-              const label = isHusband ? t('label_husband') : t('label_wife');
-              formattedList.push(`<a href="?${famParams.toString()}" data-spa-nav title="${label}">${partnerDisplay}</a>`);
-            });
-          } catch (e) { console.error("Failed to parse JSON for partners", e); }
-        };
-        processPartners(row.husbands_list, true);
-        processPartners(row.wifes_list, false);
-        if (count > 0) {
-          html += `<td>
-          <details class="expandable-cell">
-            <summary>${count}</summary>
-            <div class="expanded-content">${formattedList.join('<br>')}</div>
-          </details>
-        </td>`;
-        } else {
-          html += `<td></td>`;
-        }
+      } else if (col === 'children' || col === 'parents' || col === 'partners') {
+        const inner = formatSpecialCell(col, row);
+        html += `<td>${inner || ''}</td>`;
       } else {
         html += `<td>${row[col] || ''}</td>`;
       }

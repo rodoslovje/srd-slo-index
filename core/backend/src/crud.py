@@ -7,17 +7,21 @@ from sqlalchemy import func, or_, and_, text, cast, Text, Integer
 from . import models
 
 METADATA_PATH = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'output', 'metadata.json'
+    os.path.dirname(__file__), "..", "data", "output", "metadata.json"
 )
+
 
 def _load_contributor_links():
     """Returns a dict of contributor name -> public URL extracted from metadata.json."""
     try:
-        with open(METADATA_PATH, encoding='utf-8') as f:
+        with open(METADATA_PATH, encoding="utf-8") as f:
             data = json.load(f)
-        return {entry['contributor']: entry['url'] for entry in data if entry.get('url')}
+        return {
+            entry["contributor"]: entry["url"] for entry in data if entry.get("url")
+        }
     except (FileNotFoundError, json.JSONDecodeError):
         return {}
+
 
 CACHE_TTL = 3600  # Cache duration in seconds (1 hour)
 _timeline_cache = {"data": None, "time": 0}
@@ -36,70 +40,169 @@ def get_match_counts(db: Session):
 def get_contributor_match_detail(db: Session, contributor_a: str, contributor_b: str):
     results = []
 
-    birth_rows = db.execute(text("""
+    birth_rows = db.execute(
+        text("""
         SELECT m.confidence, m.match_fields,
                b1.id AS a_id, b1.name AS a_name, b1.surname AS a_surname,
                b1.date_of_birth AS a_date, b1.place_of_birth AS a_place,
+               b1.father_name AS a_fname, b1.father_surname AS a_fsur,
+               b1.mother_name AS a_mname, b1.mother_surname AS a_msur,
+               b1.husbands_list AS a_hl, b1.wifes_list AS a_wl,
                b2.id AS b_id, b2.name AS b_name, b2.surname AS b_surname,
-               b2.date_of_birth AS b_date, b2.place_of_birth AS b_place
+               b2.date_of_birth AS b_date, b2.place_of_birth AS b_place,
+               b2.father_name AS b_fname, b2.father_surname AS b_fsur,
+               b2.mother_name AS b_mname, b2.mother_surname AS b_msur,
+               b2.husbands_list AS b_hl, b2.wifes_list AS b_wl
         FROM matches m
         JOIN births b1 ON m.record_a_id = b1.id
         JOIN births b2 ON m.record_b_id = b2.id
         WHERE m.contributor_a = :a AND m.contributor_b = :b AND m.record_type = 'birth'
         ORDER BY m.confidence DESC
-    """), {"a": contributor_a, "b": contributor_b}).fetchall()
+    """),
+        {"a": contributor_a, "b": contributor_b},
+    ).fetchall()
     for r in birth_rows:
-        results.append({
-            "record_type": "birth",
-            "confidence": r.confidence,
-            "match_fields": r.match_fields,
-            "record_a": {"id": r.a_id, "name": r.a_name, "surname": r.a_surname, "date": r.a_date, "place": r.a_place},
-            "record_b": {"id": r.b_id, "name": r.b_name, "surname": r.b_surname, "date": r.b_date, "place": r.b_place},
-        })
+        results.append(
+            {
+                "record_type": "birth",
+                "confidence": r.confidence,
+                "match_fields": r.match_fields,
+                "record_a": {
+                    "id": r.a_id,
+                    "name": r.a_name,
+                    "surname": r.a_surname,
+                    "date": r.a_date,
+                    "place": r.a_place,
+                    "father_name": r.a_fname,
+                    "father_surname": r.a_fsur,
+                    "mother_name": r.a_mname,
+                    "mother_surname": r.a_msur,
+                    "husbands_list": r.a_hl,
+                    "wifes_list": r.a_wl,
+                },
+                "record_b": {
+                    "id": r.b_id,
+                    "name": r.b_name,
+                    "surname": r.b_surname,
+                    "date": r.b_date,
+                    "place": r.b_place,
+                    "father_name": r.b_fname,
+                    "father_surname": r.b_fsur,
+                    "mother_name": r.b_mname,
+                    "mother_surname": r.b_msur,
+                    "husbands_list": r.b_hl,
+                    "wifes_list": r.b_wl,
+                },
+            }
+        )
 
-    family_rows = db.execute(text("""
+    family_rows = db.execute(
+        text("""
         SELECT m.confidence, m.match_fields,
                f1.id AS a_id, f1.husband_name AS a_hname, f1.husband_surname AS a_hsur,
                f1.wife_name AS a_wname, f1.wife_surname AS a_wsur,
                f1.date_of_marriage AS a_date, f1.place_of_marriage AS a_place,
+               f1.husband_parents AS a_hp, f1.wife_parents AS a_wp, f1.children_list AS a_cl,
                f2.id AS b_id, f2.husband_name AS b_hname, f2.husband_surname AS b_hsur,
                f2.wife_name AS b_wname, f2.wife_surname AS b_wsur,
-               f2.date_of_marriage AS b_date, f2.place_of_marriage AS b_place
+               f2.date_of_marriage AS b_date, f2.place_of_marriage AS b_place,
+               f2.husband_parents AS b_hp, f2.wife_parents AS b_wp, f2.children_list AS b_cl
         FROM matches m
         JOIN families f1 ON m.record_a_id = f1.id
         JOIN families f2 ON m.record_b_id = f2.id
         WHERE m.contributor_a = :a AND m.contributor_b = :b AND m.record_type = 'family'
         ORDER BY m.confidence DESC
-    """), {"a": contributor_a, "b": contributor_b}).fetchall()
+    """),
+        {"a": contributor_a, "b": contributor_b},
+    ).fetchall()
     for r in family_rows:
-        results.append({
-            "record_type": "family",
-            "confidence": r.confidence,
-            "match_fields": r.match_fields,
-            "record_a": {"id": r.a_id, "husband_name": r.a_hname, "husband_surname": r.a_hsur, "wife_name": r.a_wname, "wife_surname": r.a_wsur, "date": r.a_date, "place": r.a_place},
-            "record_b": {"id": r.b_id, "husband_name": r.b_hname, "husband_surname": r.b_hsur, "wife_name": r.b_wname, "wife_surname": r.b_wsur, "date": r.b_date, "place": r.b_place},
-        })
+        results.append(
+            {
+                "record_type": "family",
+                "confidence": r.confidence,
+                "match_fields": r.match_fields,
+                "record_a": {
+                    "id": r.a_id,
+                    "husband_name": r.a_hname,
+                    "husband_surname": r.a_hsur,
+                    "wife_name": r.a_wname,
+                    "wife_surname": r.a_wsur,
+                    "date": r.a_date,
+                    "place": r.a_place,
+                    "husband_parents": r.a_hp,
+                    "wife_parents": r.a_wp,
+                    "children_list": r.a_cl,
+                },
+                "record_b": {
+                    "id": r.b_id,
+                    "husband_name": r.b_hname,
+                    "husband_surname": r.b_hsur,
+                    "wife_name": r.b_wname,
+                    "wife_surname": r.b_wsur,
+                    "date": r.b_date,
+                    "place": r.b_place,
+                    "husband_parents": r.b_hp,
+                    "wife_parents": r.b_wp,
+                    "children_list": r.b_cl,
+                },
+            }
+        )
 
-    death_rows = db.execute(text("""
+    death_rows = db.execute(
+        text("""
         SELECT m.confidence, m.match_fields,
                d1.id AS a_id, d1.name AS a_name, d1.surname AS a_surname,
                d1.date_of_death AS a_date, d1.place_of_death AS a_place,
+               d1.father_name AS a_fname, d1.father_surname AS a_fsur,
+               d1.mother_name AS a_mname, d1.mother_surname AS a_msur,
+               d1.husbands_list AS a_hl, d1.wifes_list AS a_wl,
                d2.id AS b_id, d2.name AS b_name, d2.surname AS b_surname,
-               d2.date_of_death AS b_date, d2.place_of_death AS b_place
+               d2.date_of_death AS b_date, d2.place_of_death AS b_place,
+               d2.father_name AS b_fname, d2.father_surname AS b_fsur,
+               d2.mother_name AS b_mname, d2.mother_surname AS b_msur,
+               d2.husbands_list AS b_hl, d2.wifes_list AS b_wl
         FROM matches m
         JOIN deaths d1 ON m.record_a_id = d1.id
         JOIN deaths d2 ON m.record_b_id = d2.id
         WHERE m.contributor_a = :a AND m.contributor_b = :b AND m.record_type = 'death'
         ORDER BY m.confidence DESC
-    """), {"a": contributor_a, "b": contributor_b}).fetchall()
+    """),
+        {"a": contributor_a, "b": contributor_b},
+    ).fetchall()
     for r in death_rows:
-        results.append({
-            "record_type": "death",
-            "confidence": r.confidence,
-            "match_fields": r.match_fields,
-            "record_a": {"id": r.a_id, "name": r.a_name, "surname": r.a_surname, "date": r.a_date, "place": r.a_place},
-            "record_b": {"id": r.b_id, "name": r.b_name, "surname": r.b_surname, "date": r.b_date, "place": r.b_place},
-        })
+        results.append(
+            {
+                "record_type": "death",
+                "confidence": r.confidence,
+                "match_fields": r.match_fields,
+                "record_a": {
+                    "id": r.a_id,
+                    "name": r.a_name,
+                    "surname": r.a_surname,
+                    "date": r.a_date,
+                    "place": r.a_place,
+                    "father_name": r.a_fname,
+                    "father_surname": r.a_fsur,
+                    "mother_name": r.a_mname,
+                    "mother_surname": r.a_msur,
+                    "husbands_list": r.a_hl,
+                    "wifes_list": r.a_wl,
+                },
+                "record_b": {
+                    "id": r.b_id,
+                    "name": r.b_name,
+                    "surname": r.b_surname,
+                    "date": r.b_date,
+                    "place": r.b_place,
+                    "father_name": r.b_fname,
+                    "father_surname": r.b_fsur,
+                    "mother_name": r.b_mname,
+                    "mother_surname": r.b_msur,
+                    "husbands_list": r.b_hl,
+                    "wifes_list": r.b_wl,
+                },
+            }
+        )
 
     return results
 
@@ -197,7 +300,9 @@ def get_top_surnames(db: Session, contributors: list = None, limit: int = 100):
     if cached and (now - cached["time"] < CACHE_TTL):
         return cached["data"][:limit]
 
-    q = db.query(models.Birth.surname, func.count(models.Birth.id)).group_by(models.Birth.surname)
+    q = db.query(models.Birth.surname, func.count(models.Birth.id)).group_by(
+        models.Birth.surname
+    )
     if contributors:
         if len(contributors) == 1:
             q = q.filter(models.Birth.contributor == contributors[0])
@@ -332,17 +437,21 @@ def search_all(
     )
 
     births = []
-    if record_type in (None, 'births'):
+    if record_type in (None, "births"):
         births_q = db.query(models.Birth)
         if name:
             births_q = births_q.filter(_text_filter(models.Birth.name, name, exact))
         if surname:
-            births_q = births_q.filter(_text_filter(models.Birth.surname, surname, exact))
+            births_q = births_q.filter(
+                _text_filter(models.Birth.surname, surname, exact)
+            )
         if place:
             births_q = births_q.filter(
                 _text_filter(models.Birth.place_of_birth, place, exact)
             )
-        date_cond_b = _date_filter(models.Birth.date_of_birth, date_from, date_to, exact)
+        date_cond_b = _date_filter(
+            models.Birth.date_of_birth, date_from, date_to, exact
+        )
         if date_cond_b is not None:
             births_q = births_q.filter(date_cond_b)
         if contributor:
@@ -356,7 +465,7 @@ def search_all(
         births = births_q.offset(skip).limit(limit).all()
 
     families = []
-    if record_type in (None, 'families'):
+    if record_type in (None, "families"):
         families_q = db.query(models.Family)
         if name:
             families_q = families_q.filter(
@@ -392,17 +501,21 @@ def search_all(
         families = families_q.offset(skip).limit(limit).all()
 
     deaths = []
-    if record_type in (None, 'deaths'):
+    if record_type in (None, "deaths"):
         deaths_q = db.query(models.Death)
         if name:
             deaths_q = deaths_q.filter(_text_filter(models.Death.name, name, exact))
         if surname:
-            deaths_q = deaths_q.filter(_text_filter(models.Death.surname, surname, exact))
+            deaths_q = deaths_q.filter(
+                _text_filter(models.Death.surname, surname, exact)
+            )
         if place:
             deaths_q = deaths_q.filter(
                 _text_filter(models.Death.place_of_death, place, exact)
             )
-        date_cond_d = _date_filter(models.Death.date_of_death, date_from, date_to, exact)
+        date_cond_d = _date_filter(
+            models.Death.date_of_death, date_from, date_to, exact
+        )
         if date_cond_d is not None:
             deaths_q = deaths_q.filter(date_cond_d)
         if contributor:
@@ -506,7 +619,7 @@ def search_advanced_families(
             children_filter = models.Family.children_list.ilike(f'%"{v}"%')
         else:
             children_filter = or_(
-                models.Family.children_list.ilike(f'%{v}%'),
+                models.Family.children_list.ilike(f"%{v}%"),
                 models.Family.children_list.op("%>")(cast(children, Text)),
             )
         query = query.filter(children_filter)
