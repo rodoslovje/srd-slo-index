@@ -37,7 +37,9 @@ log = logging.getLogger(__name__)
 # --- tuning knobs ---
 YEAR_TOLERANCE     = 5       # max year difference still considered a match
 CONFIDENCE_MIN     = 0.72    # records below this threshold are not stored
-TRGM_THRESHOLD     = 0.65    # pg_trgm.similarity_threshold for the % join operator
+TRGM_THRESHOLD     = 0.72    # pg_trgm.similarity_threshold — must be ≥ CONFIDENCE_MIN so
+                              # the trigram pre-filter only passes candidates that can
+                              # actually reach the stored-confidence threshold
 WORK_MEM           = "256MB" # per-session work_mem; raise if you have spare RAM
 PG_PARALLEL_WORKERS = 4      # PostgreSQL-internal parallel workers per query
                               # (independent of Python --workers; requires max_worker_processes
@@ -411,6 +413,29 @@ def main(workers=2):
     if not pending_count:
         log.info("No pending match jobs.")
         return
+
+    # Back-fill year columns for any rows that pre-date the schema migration.
+    # Runs once per table when NULL rows exist; skipped on subsequent calls.
+    # Done BEFORE ANALYZE so the planner sees the populated histogram.
+    for table, year_col, date_col in (
+        ("births",   "birth_year",    "date_of_birth"),
+        ("families", "marriage_year", "date_of_marriage"),
+        ("deaths",   "death_year",    "date_of_death"),
+    ):
+        with engine.connect() as conn:
+            null_rows = conn.execute(
+                text(f"SELECT COUNT(*) FROM {table} WHERE {year_col} IS NULL")
+            ).scalar()
+        if null_rows:
+            log.info(f"Back-filling {year_col} for {null_rows:,} rows in {table}...")
+            t_bf = time.monotonic()
+            with engine.begin() as conn:
+                conn.execute(text(
+                    f"UPDATE {table} SET {year_col} = "
+                    f"CAST(SUBSTRING({date_col} FROM '\\d{{4}}') AS SMALLINT) "
+                    f"WHERE {year_col} IS NULL AND {date_col} ~ '\\d{{4}}'"
+                ))
+            log.info(f"  {table} back-fill done in {time.monotonic()-t_bf:.0f}s")
 
     # Refresh planner statistics so the query planner has accurate row-count estimates.
     # Critical after a bulk import — without this the planner may choose seq scans
