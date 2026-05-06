@@ -2,8 +2,6 @@ import argparse
 import os
 import json
 import re
-import subprocess
-import sys
 import unicodedata
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
@@ -638,37 +636,11 @@ def main():
             updated_contributors.append(contributor_id)
 
     print("\nData import finished successfully.")
-
     if updated_contributors:
-        for c in updated_contributors:
-            db.execute(
-                text("""
-                    INSERT INTO match_jobs (contributor, status, queued_at)
-                    VALUES (:c, 'pending', NOW())
-                    ON CONFLICT (contributor) DO UPDATE SET status = 'pending', queued_at = NOW()
-                """),
-                {"c": c},
-            )
-        db.commit()
         print(
-            f"Queued match computation for {len(updated_contributors)} contributor(s)."
+            f"Updated {len(updated_contributors)} contributor(s). "
+            "Run matches manually: python tools/trigger_matches.py --all"
         )
-
-        script = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "compute_matches.py"
-        )
-        log_path = os.path.join(DATA_DIR, "compute_matches.log")
-        try:
-            subprocess.Popen(
-                [sys.executable, script],
-                stdout=open(log_path, "a"),
-                stderr=subprocess.STDOUT,
-                start_new_session=True,
-            )
-            print(f"Match computation started in background (log: {log_path}).")
-        except Exception as e:
-            print(f"Warning: could not start match computation automatically: {e}")
-            print("Run manually: python tools/compute_matches.py")
 
     db.close()
 
